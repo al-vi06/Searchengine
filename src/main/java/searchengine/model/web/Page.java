@@ -1,8 +1,7 @@
-package searchengine.model;
+package searchengine.model.web;
 
 import lombok.Data;
 import javax.persistence.*;
-import org.hibernate.annotations.Index;
 
 @Data
 @Entity
@@ -16,7 +15,6 @@ public class Page {
     private Site site;
 
     @Column(columnDefinition = "TEXT", nullable = false)
-    @Index(name = "idx_path") //проиндексировано
     private String path;
 
     @Column(name = "code", nullable = false)

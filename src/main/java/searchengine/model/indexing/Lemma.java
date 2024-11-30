@@ -1,4 +1,4 @@
-package searchengine.model;
+package searchengine.model.indexing;
 
 import org.springframework.data.annotation.Id;
 

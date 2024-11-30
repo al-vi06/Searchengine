@@ -1,4 +1,4 @@
-package searchengine.model;
+package searchengine.model.multithreading;
 
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -44,7 +44,10 @@ public class SiteMapTask extends RecursiveTask<Links> {
 
         List<SiteMapTask> tasks = new ArrayList<>();
         try {
-            Document doc = Jsoup.connect(url).get();
+            Document doc = Jsoup.connect(url)
+                    .userAgent("Mozilla/5.0 (Windows; U; WindowsNT 5.1; en-US; rv1.8.1.6) HeliontSearchBot/20070725 Firefox/2.0.0.6")
+                    .referrer("http://www.google.com")
+                    .get();
             Elements links = doc.select("a[href]");
             for (Element link : links) {
                 String href = link.attr("abs:href");

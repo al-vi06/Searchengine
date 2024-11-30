@@ -1,4 +1,4 @@
-package searchengine.model;
+package searchengine.model.web;
 
 import lombok.Data;
 import java.util.Date;
@@ -30,8 +30,8 @@ public class Site {
     @Column(columnDefinition = "VARCHAR(255)", nullable = false)
     private String name;
 
-//    @OneToMany(mappedBy = "site", cascade = CascadeType.ALL, orphanRemoval = true)
-//    private List<Page> pages;
+    @OneToMany(mappedBy = "site", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Page> pages;
 
 //    id INT NOT NULL AUTO_INCREMENT;
 //    status ENUM('INDEXING', 'INDEXED', 'FAILED') NOT NULL — текущий статус полной индексации сайта, отражающий готовность поискового движка осуществлять поиск по сайту — индексация или переиндексация в процессе, сайт полностью проиндексирован (готов к поиску) либо его не удалось проиндексировать (сайт не готов к поиску и не будет до устранения ошибок и перезапуска индексации);

@@ -4,24 +4,29 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import searchengine.model.*;
 import searchengine.config.SitesList;
 import searchengine.dto.statistics.DetailedStatisticsItem;
 import searchengine.dto.statistics.StatisticsData;
 import searchengine.dto.statistics.StatisticsResponse;
 import searchengine.dto.statistics.TotalStatistics;
+import searchengine.model.multithreading.Links;
+import searchengine.model.multithreading.SiteMapTask;
+import searchengine.model.web.Page;
+import searchengine.model.web.Site;
+import searchengine.model.web.Status;
 import searchengine.reposytories.PageRepository;
 import searchengine.reposytories.SiteRepository;
 
-import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
-import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.ForkJoinPool;
+
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
+
 
 @Service
 @RequiredArgsConstructor
@@ -33,8 +38,11 @@ public class StatisticsServiceImpl implements StatisticsService {
     private final PageRepository pageRepository;
     private final Random random = new Random();
 
+    private volatile boolean indexingInProgress = false; //? что такое volatile
+    private final Object lock = new Object();
+
     @Override
-    public StatisticsResponse getStatistics() {
+   public StatisticsResponse getStatistics() {
         String[] statuses = { "INDEXED", "FAILED", "INDEXING" };
         String[] errors = {
                 "Ошибка индексации: главная страница сайта не доступна",
@@ -75,78 +83,120 @@ public class StatisticsServiceImpl implements StatisticsService {
         return response;
     }
 
+    ///////////++{
     @Override
     @Transactional
-    public StatisticsResponse startIndexing() {
-        StatisticsResponse response = new StatisticsResponse();
+    public void startIndexing() { //полная индексация
+        synchronized (lock) {
+            if (indexingInProgress) {
+                throw new IllegalStateException("Индексация уже запущена");
+            }
+            indexingInProgress = true;
+        }
+//sites.getSites().parallelStream()
         try {
-            // Получаем список сайтов из конфигурации
-            List<Site> sitesList = sites.getSites();
-
-            for (Site siteEl : sitesList) {
-                // Удаляем старые данные для текущего сайта
-                siteRepository.deleteByUrl(siteEl.getUrl());
-                pageRepository.deleteBySiteUrl(siteEl.getUrl());
-
-                // Создаем новую запись для сайта в таблице Site со статусом INDEXING
-                Site site = new Site();
-                site.setName(site.getName());
-                site.setUrl(site.getUrl());
-                site.setStatus(Status.INDEXING);
-                site.setStatus_time(new Date(System.currentTimeMillis()));
-                site = siteRepository.save(site);
-
-                // Начинаем обход страниц для индексации
-                try {
-                    indexPages(site);
-                } catch (Exception e) {
-                    // Если ошибка, меняем статус на FAILED и записываем ошибку
-                    site.setStatus(Status.FAILED);
-                    site.setLast_error("Ошибка индексации: " + e.getMessage());
-                    siteRepository.save(site);
-                    throw e;  // Пробрасываем исключение дальше
-                }
-
-                // После завершения обхода меняем статус на INDEXED
-                site.setStatus(Status.INDEXED);
-                siteRepository.save(site);
-            }
-
-            response.setResult(true);
-        } catch (DataAccessException e) {
-            response.setResult(false);
-            response.setErrorMessage("Ошибка при работе с базой данных: " + e.getMessage());
+            sites.getSites().parallelStream()
+                    .forEach(siteConfig -> indexSingleSite(siteConfig));
         } catch (Exception e) {
-            response.setResult(false);
-            response.setErrorMessage("Ошибка индексации: " + e.getMessage());
+            e.printStackTrace();
         }
-
-        return response;
-    }
-
-    private void indexPages(Site site) throws Exception {
-        String baseUrl = site.getUrl();
-
-        ForkJoinPool pool = new ForkJoinPool();
-        Links Link = pool.invoke(new SiteMapTask(baseUrl));
-
-        for (Links child : Link.getChildLinks()) {
-            try {
-                // Создаем новую запись в таблице page
-                Page page = new Page();
-                page.setSite(site);
-                page.setPath(baseUrl + child);
-                //page.setCode(random.nextInt(200, 500));
-                page.setContent("Содержимое страницы " + child);
-                pageRepository.save(page);
-
-                site.setStatus_time(new Date(System.currentTimeMillis()));
-                siteRepository.save(site);
-            } catch (Exception e) {
-                // Ошибка на конкретной странице
-                throw new Exception("Ошибка индексации страницы " + child + ": " + e.getMessage());
+        finally {
+            synchronized (lock) {
+                indexingInProgress = false;
             }
         }
+
     }
 
+    @Transactional
+    public void indexSingleSite(Site siteConfig) {//индексация 1 сайта
+        try {
+            //Удаление старых данных
+            siteRepository.deleteByUrl(siteConfig.getUrl());
+            pageRepository.deleteBySiteUrl(siteConfig.getUrl());
+
+            //Создание новой записи
+            Site site = new Site();
+            site.setName(siteConfig.getName());
+            site.setUrl(siteConfig.getUrl());
+            site.setStatus(Status.INDEXING);
+            site.setStatus_time(new Date());
+            siteRepository.save(site);
+
+            //Обход страниц
+            ForkJoinPool pool = new ForkJoinPool();
+            Links rootLinks = pool.invoke(new SiteMapTask(siteConfig.getUrl()));
+            savePages(site, rootLinks);
+
+            //Установка статуса INDEXED
+            site.setStatus(Status.INDEXED);
+            siteRepository.save(site);
+
+        } catch (Exception e) {
+            handleSiteError(siteConfig, e.getMessage());
+        }
+    }
+
+    @Transactional
+    public void savePages(Site site, Links links) {//сохранение страниц
+        for (Links child : links.getChildLinks()) {
+            Page page = new Page();
+            page.setSite(site);
+            page.setPath(child.getUrl());
+            page.setCode(200); //успешный код
+            String content = fetchPageContent(child.getUrl());
+            page.setContent(content);
+
+            pageRepository.save(page);
+
+            site.setStatus_time(new Date());
+            siteRepository.save(site);
+        }
+    }
+    public String fetchPageContent(String url)  {
+        // Устанавливаем соединение и получаем HTML-код страницы
+        Document document = null;
+        try {
+            document = Jsoup.connect(url)
+                    .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36")
+                    .timeout(10000)
+                    .get();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+
+        // Возвращаем HTML как строку
+        return document.html();
+    }
+
+    private void handleSiteError(Site siteConfig, String errorMessage) {//метод обработки ошибок
+        Site site = siteRepository.findByUrl(siteConfig.getUrl());
+        if (site != null) {
+            site.setStatus(Status.FAILED);
+            site.setLast_error(errorMessage);
+            siteRepository.save(site);
+        }
+    }
+    @Override
+    public boolean isIndexing() {
+        return indexingInProgress;
+    }
+
+    @Override
+    public void stopIndexing() {//остановка индексации
+        synchronized (lock) {
+            if (!indexingInProgress) {
+                throw new IllegalStateException("Индексация не запущена");
+            }
+            indexingInProgress = false;
+        }
+
+        List<Site> sitesInProgress = siteRepository.findAllByStatus(Status.INDEXING);
+        for (Site site : sitesInProgress) {
+            site.setStatus(Status.FAILED);
+            site.setLast_error("Индексация остановлена пользователем");
+            siteRepository.save(site);
+        }
+    }
+    ///////////}
 }
