@@ -1,6 +1,7 @@
 package searchengine.services;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -9,6 +10,7 @@ import searchengine.dto.statistics.DetailedStatisticsItem;
 import searchengine.dto.statistics.StatisticsData;
 import searchengine.dto.statistics.StatisticsResponse;
 import searchengine.dto.statistics.TotalStatistics;
+import searchengine.model.multithreading.HttpConfig;
 import searchengine.model.multithreading.Links;
 import searchengine.model.multithreading.SiteMapTask;
 import searchengine.model.web.Page;
@@ -33,16 +35,18 @@ import org.jsoup.nodes.Document;
 public class StatisticsServiceImpl implements StatisticsService {
 
     private final SitesList sites;
-
     private final SiteRepository siteRepository;
     private final PageRepository pageRepository;
     private final Random random = new Random();
 
-    private volatile boolean indexingInProgress = false; //? что такое volatile
+    private volatile boolean indexingInProgress = false;
     private final Object lock = new Object();
 
+    @Autowired
+    private final HttpConfig httpConfig; // Инжекция HttpConfig
+
     @Override
-   public StatisticsResponse getStatistics() {
+    public StatisticsResponse getStatistics() {
         String[] statuses = { "INDEXED", "FAILED", "INDEXING" };
         String[] errors = {
                 "Ошибка индексации: главная страница сайта не доступна",
@@ -93,7 +97,7 @@ public class StatisticsServiceImpl implements StatisticsService {
             }
             indexingInProgress = true;
         }
-//sites.getSites().parallelStream()
+
         try {
             sites.getSites().parallelStream()
                     .forEach(siteConfig -> indexSingleSite(siteConfig));
@@ -109,7 +113,7 @@ public class StatisticsServiceImpl implements StatisticsService {
     }
 
     @Transactional
-    public void indexSingleSite(Site siteConfig) {//индексация 1 сайта
+    public void indexSingleSite(Site siteConfig) {//индексация сайта
         try {
             //Удаление старых данных
             siteRepository.deleteByUrl(siteConfig.getUrl());
@@ -125,7 +129,7 @@ public class StatisticsServiceImpl implements StatisticsService {
 
             //Обход страниц
             ForkJoinPool pool = new ForkJoinPool();
-            Links rootLinks = pool.invoke(new SiteMapTask(siteConfig.getUrl()));
+            Links rootLinks = pool.invoke(new SiteMapTask(siteConfig.getUrl(), httpConfig));
             savePages(site, rootLinks);
 
             //Установка статуса INDEXED
@@ -144,32 +148,19 @@ public class StatisticsServiceImpl implements StatisticsService {
             page.setSite(site);
             page.setPath(child.getUrl());
             page.setCode(200); //успешный код
-            String content = fetchPageContent(child.getUrl());
-            page.setContent(content);
+            page.setContent(child.getContent());
 
+            //site.getPages().add(page);
             pageRepository.save(page);
 
             site.setStatus_time(new Date());
             siteRepository.save(site);
         }
     }
-    public String fetchPageContent(String url)  {
-        // Устанавливаем соединение и получаем HTML-код страницы
-        Document document = null;
-        try {
-            document = Jsoup.connect(url)
-                    .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36")
-                    .timeout(10000)
-                    .get();
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
 
-        // Возвращаем HTML как строку
-        return document.html();
-    }
-
-    private void handleSiteError(Site siteConfig, String errorMessage) {//метод обработки ошибок
+    @Override
+    @Transactional
+    public void handleSiteError(Site siteConfig, String errorMessage) {//метод обработки ошибок
         Site site = siteRepository.findByUrl(siteConfig.getUrl());
         if (site != null) {
             site.setStatus(Status.FAILED);
@@ -183,6 +174,7 @@ public class StatisticsServiceImpl implements StatisticsService {
     }
 
     @Override
+    @Transactional
     public void stopIndexing() {//остановка индексации
         synchronized (lock) {
             if (!indexingInProgress) {
@@ -198,5 +190,5 @@ public class StatisticsServiceImpl implements StatisticsService {
             siteRepository.save(site);
         }
     }
-    ///////////}
+    ///////////--}
 }

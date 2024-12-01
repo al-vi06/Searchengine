@@ -1,25 +1,29 @@
 package searchengine.model.indexing;
 
-import org.springframework.data.annotation.Id;
+import lombok.Data;
+import searchengine.model.web.Page;
+import javax.persistence.*;
 
-import javax.persistence.Column;
-import javax.persistence.GeneratedValue;
-import javax.persistence.GenerationType;
 
+@Data
+@Entity
+@Table(name = "`index`")
 public class Index {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(columnDefinition = "INT", nullable = false)
     private int id;
-    @Column(name = "page_id", nullable = false)
-    private int pageId;
-    @Column(name = "lemma_id", nullable = false)
-    private int lemmaId;
-    @Column(columnDefinition = "FLOAT")
-    private double rank;
 
-//    id INT NOT NULL AUTO_INCREMENT;
-//    page_id INT NOT NULL — идентификатор страницы;
-//    lemma_id INT NOT NULL — идентификатор леммы;
-//    rank FLOAT NOT NULL — количество данной леммы для данной страницы.
+    @ManyToOne
+    @JoinColumn(name = "page_id", nullable = false)
+    private Page page;
+
+    @ManyToOne
+    @JoinColumn(name = "lemma_id", nullable = false)
+    private Lemma lemma;
+
+    @Column(name = "`rank`", columnDefinition = "FLOAT")
+    private double rank;
 
 }

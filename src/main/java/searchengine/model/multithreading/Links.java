@@ -8,6 +8,7 @@ import java.util.List;
 @Data
 public class Links {
     private final String url;
+    private String content;
     private List<Links> childLinks = new ArrayList<>();
 
 //    public Links(String url) {
