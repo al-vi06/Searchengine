@@ -9,5 +9,6 @@ public interface StatisticsService {
     void stopIndexing();
     boolean isIndexing();
     void handleSiteError(Site siteConfig, String errorMessage);
+    void indexPage();
 
 }

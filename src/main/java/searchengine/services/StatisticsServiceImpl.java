@@ -10,24 +10,30 @@ import searchengine.dto.statistics.DetailedStatisticsItem;
 import searchengine.dto.statistics.StatisticsData;
 import searchengine.dto.statistics.StatisticsResponse;
 import searchengine.dto.statistics.TotalStatistics;
+import searchengine.model.indexing.Index;
+import searchengine.model.indexing.Lemma;
+import searchengine.model.indexing.LemmaFinder;
 import searchengine.model.multithreading.HttpConfig;
 import searchengine.model.multithreading.Links;
 import searchengine.model.multithreading.SiteMapTask;
 import searchengine.model.web.Page;
 import searchengine.model.web.Site;
 import searchengine.model.web.Status;
+import searchengine.reposytories.IndexRepository;
+import searchengine.reposytories.LemmaRepository;
 import searchengine.reposytories.PageRepository;
 import searchengine.reposytories.SiteRepository;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-import java.util.Random;
+import java.util.*;
 import java.util.concurrent.ForkJoinPool;
 
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
+
+import javax.persistence.CascadeType;
+import javax.persistence.Column;
+import javax.persistence.OneToMany;
 
 
 @Service
@@ -37,6 +43,8 @@ public class StatisticsServiceImpl implements StatisticsService {
     private final SitesList sites;
     private final SiteRepository siteRepository;
     private final PageRepository pageRepository;
+    private final LemmaRepository lemmaRepository;
+    private final IndexRepository indexRepository;
     private final Random random = new Random();
 
     private volatile boolean indexingInProgress = false;
@@ -116,8 +124,11 @@ public class StatisticsServiceImpl implements StatisticsService {
     public void indexSingleSite(Site siteConfig) {//индексация сайта
         try {
             //Удаление старых данных
-            siteRepository.deleteByUrl(siteConfig.getUrl());
-            pageRepository.deleteBySiteUrl(siteConfig.getUrl());
+            String url = siteConfig.getUrl();
+            siteRepository.deleteByUrl(url);
+            pageRepository.deleteBySiteUrl(url);
+            lemmaRepository.deleteBySiteUrl(url);
+            //indexRepository.deleteByLemma();
 
             //Создание новой записи
             Site site = new Site();
@@ -155,6 +166,8 @@ public class StatisticsServiceImpl implements StatisticsService {
 
             site.setStatus_time(new Date());
             siteRepository.save(site);
+
+            indexPage1(site, page);
         }
     }
 
@@ -168,6 +181,13 @@ public class StatisticsServiceImpl implements StatisticsService {
             siteRepository.save(site);
         }
     }
+
+    @Override
+    public void indexPage() {
+
+    }
+
+
     @Override
     public boolean isIndexing() {
         return indexingInProgress;
@@ -190,5 +210,37 @@ public class StatisticsServiceImpl implements StatisticsService {
             siteRepository.save(site);
         }
     }
+
+    @Transactional
+    public void indexPage1(Site site, Page page) {
+
+        LemmaFinder lemmaFinder;
+        try {
+            lemmaFinder = LemmaFinder.getInstance();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+
+        String cleanHtml = lemmaFinder.cleanHtmlTags(page.getContent());
+        Map<String, Integer> lemmas = lemmaFinder.collectLemmas(cleanHtml);
+        lemmas.forEach((key, value) -> {
+            Lemma lemma = new Lemma();
+            lemma.setSite(site);
+            lemma.setLemma(key);
+            lemma.setFrequency(value);
+            //List<Index> indexes;
+            lemmaRepository.save(lemma);
+
+            Index index =new Index();
+            index.setLemma(lemma);
+            index.setPage(page);
+            index.setRank(value);
+            indexRepository.save(index);
+        });
+
+
+    }
+
     ///////////--}
+
 }
