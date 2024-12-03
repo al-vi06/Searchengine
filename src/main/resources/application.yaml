@@ -3,18 +3,22 @@ server:
 
 spring:
   datasource:
-    username: root
-    password: 1234
-    url: jdbc:mysql://localhost:3306/search_engine?useSSL=false&requireSSL=false&allowPublicKeyRetrieval=true
+    username: skillbox
+    password: skillbox
+    url: jdbc:postgresql://localhost:5432/search_engine
+    driver-class-name: org.postgresql.Driver
   jpa:
     properties:
       hibernate:
-        dialect: org.hibernate.dialect.MySQL8Dialect
+        dialect: org.hibernate.dialect.PostgreSQLDialect
     hibernate:
-      ddl-auto: update
+      ddl-auto: validate
     show-sql: true
   liquibase:
-    change-log: classpath:liquibase.xml
+    change-log: classpath:changelog.xml
+  logging:
+    level:
+      liquibase: DEBUG
 
 http:
   user-agent: Mozilla/5.0 (Windows; U; WindowsNT 5.1; en-US; rv1.8.1.6) HeliontSearchBot/20070725 Firefox/2.0.0.6

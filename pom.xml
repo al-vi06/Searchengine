@@ -67,6 +67,11 @@
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
         </dependency>
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <version>42.7.3</version> <!-- Используйте актуальную версию -->
+        </dependency>
 
         <!--Лемматизатор { -->
         <dependency>
@@ -103,6 +108,11 @@
             <version>1.5</version>
             <scope>system</scope>
             <systemPath>${project.basedir}/libs/morphology/russian/1.5/russian-1.5.jar</systemPath>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-devtools</artifactId>
+            <optional>true</optional>
         </dependency>
         <!--Лемматизатор } -->
 

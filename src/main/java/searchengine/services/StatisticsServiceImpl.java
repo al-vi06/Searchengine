@@ -97,7 +97,6 @@ public class StatisticsServiceImpl implements StatisticsService {
 
     ///////////++{
     @Override
-    @Transactional
     public void startIndexing() { //полная индексация
         synchronized (lock) {
             if (indexingInProgress) {

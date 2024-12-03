@@ -124,24 +124,23 @@ public class LemmaFinder {
             return "";
         }
 
-        // 1. Парсим HTML с помощью Jsoup
         Document document = Jsoup.parse(htmlCode);
 
-        // 2. Удаляем скрипты, стили и теги <noscript>
+        //Удаляем скрипты, стили и теги <noscript>
         document.select("script, style, noscript").remove();
 
-        // 3. Удаляем комментарии
+        //Удаляем комментарии
         document.outputSettings().prettyPrint(false); // Чтобы избежать перезаписи текста в комментариях
         String withoutComments = document.html().replaceAll("<!--.*?-->", "");
 
-        // 4. Убираем HTML-теги, оставляя только текст
+        //Убираем HTML-теги, оставляем только текст
         Document cleanedDocument = Jsoup.parse(withoutComments);
         String textOnly = cleanedDocument.text();
 
-        // 5. Фильтруем текст, оставляя только русские и английские символы, а также пробелы
+        //только русские и английские символы, а также пробелы
         String cleanedText = textOnly.replaceAll("[^а-яА-Яa-zA-Z\\s]", "");
 
-        // 6. Убираем лишние пробелы
+        //Убираем лишние пробелы
         return cleanedText.trim().replaceAll("\\s{2,}", " ");
     }
     //--

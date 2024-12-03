@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                      http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.29.xsd"
+        objectQuotingStrategy="QUOTE_ONLY_RESERVED_WORDS">
+
+    <changeSet id="1" author="Alex">
+        <createTable tableName="index">
+            <column autoIncrement="true" name="id" type="INT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_index"/>
+            </column>
+            <column name="page_id" type="INT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="lemma_id" type="INT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="rank" type="FLOAT"/>
+        </createTable>
+    </changeSet>
+
+    <changeSet id="2" author="Alex">
+        <createTable tableName="lemma">
+            <column autoIncrement="true" name="id" type="INT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_lemma"/>
+            </column>
+            <column name="site_id" type="INT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="lemma" type="VARCHAR(255)"/>
+            <column name="frequency" type="INT">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+
+    <changeSet id="3" author="Alex">
+        <createTable tableName="page">
+            <column autoIncrement="true" name="id" type="INT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_page"/>
+            </column>
+            <column name="site_id" type="INT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="path" type="TEXT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="code" type="INT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="content" type="MEDIUMTEXT">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+
+     <changeSet id="4" author="IceCream">
+        <sql>
+            CREATE TYPE status_enum AS ENUM ('INDEXING', 'INDEXED', 'FAILED');
+        </sql>
+    </changeSet>
+
+    <!--
+        <changeSet id="4" author="Alex">
+            <sql>
+                DO $$
+                BEGIN
+                    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'status_enum') THEN
+                    CREATE TYPE status_enum AS ENUM ('INDEXING', 'INDEXED', 'FAILED');
+                END IF;
+                END $$;
+            </sql>
+         </changeSet>
+         -->
+
+     <changeSet id="5" author="Alex">
+         <createTable tableName="site">
+             <column autoIncrement="true" name="id" type="INT">
+                 <constraints nullable="false" primaryKey="true" primaryKeyName="pk_site"/>
+             </column>
+             <column name="status" type="status_enum">
+                 <constraints nullable="false"/>
+             </column>
+             <column name="status_time" type="DATETIME">
+                 <constraints nullable="false"/>
+             </column>
+             <column name="last_error" type="TEXT"/>
+             <column name="url" type="VARCHAR(255)">
+                 <constraints nullable="false"/>
+             </column>
+             <column name="name" type="VARCHAR(255)">
+                 <constraints nullable="false"/>
+             </column>
+         </createTable>
+     </changeSet>
+
+     <changeSet id="6" author="Alex">
+         <addUniqueConstraint columnNames="url" constraintName="uc_site_url" tableName="site"/>
+     </changeSet>
+
+     <changeSet id="7" author="Alex">
+         <createIndex indexName="idx_page_path" tableName="page">
+             <column name="path"/>
+         </createIndex>
+     </changeSet>
+
+     <changeSet id="8" author="Alex">
+         <addForeignKeyConstraint baseColumnNames="lemma_id" baseTableName="index" constraintName="FK_INDEX_ON_LEMMA"
+                                  referencedColumnNames="id" referencedTableName="lemma"/>
+     </changeSet>
+     <changeSet id="9" author="Alex">
+         <addForeignKeyConstraint baseColumnNames="page_id" baseTableName="index" constraintName="FK_INDEX_ON_PAGE"
+                                  referencedColumnNames="id" referencedTableName="page"/>
+     </changeSet>
+     <changeSet id="10" author="Alex">
+         <addForeignKeyConstraint baseColumnNames="site_id" baseTableName="lemma" constraintName="FK_LEMMA_ON_SITE"
+                                  referencedColumnNames="id" referencedTableName="site"/>
+     </changeSet>
+     <changeSet id="11" author="Alex">
+         <addForeignKeyConstraint baseColumnNames="site_id" baseTableName="page" constraintName="FK_PAGE_ON_SITE"
+                                  referencedColumnNames="id" referencedTableName="site"/>
+     </changeSet>
+
+ </databaseChangeLog>
