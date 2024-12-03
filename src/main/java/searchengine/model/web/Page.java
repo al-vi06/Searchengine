@@ -1,14 +1,21 @@
 package searchengine.model.web;
 
 import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 import searchengine.model.indexing.Index;
 import searchengine.model.indexing.Lemma;
 
 import javax.persistence.*;
 import java.util.List;
 
+@Getter
+@Setter
 @Data
 @Entity
+@Table(name = "Page", indexes = {
+        @javax.persistence.Index(name = "idx_page_path", columnList = "path")
+})
 public class Page {
 
     @Id
