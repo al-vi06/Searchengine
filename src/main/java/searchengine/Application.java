@@ -16,22 +16,6 @@ public class Application {
     public static void main(String[] args) {
         SpringApplication.run(Application.class, args);
 
-//        try {
-//            LemmaFinder lemmaFinder = LemmaFinder.getInstance();
-//
-//            String cleanHtml = lemmaFinder.cleanHtmlTags(str);
-//
-//            String lemmas = lemmaFinder.collectLemmas(cleanHtml).toString();
-//            System.out.println(lemmas);
-//
-//            Set<String> lemmasSet = lemmaFinder.getLemmaSet(cleanHtml);
-//            System.out.println(lemmasSet);
-//
-//
-//        } catch (IOException e) {
-//            throw new RuntimeException(e);
-//        }
-
     }
 
 }
