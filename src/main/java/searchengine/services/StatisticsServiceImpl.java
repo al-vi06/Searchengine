@@ -2,9 +2,8 @@ package searchengine.services;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.dao.DataAccessException;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import searchengine.config.SitesList;
 import searchengine.dto.statistics.DetailedStatisticsItem;
 import searchengine.dto.statistics.StatisticsData;
@@ -16,9 +15,9 @@ import searchengine.model.indexing.LemmaFinder;
 import searchengine.model.multithreading.HttpConfig;
 import searchengine.model.multithreading.Links;
 import searchengine.model.multithreading.SiteMapTask;
-import searchengine.model.web.Page;
-import searchengine.model.web.Site;
-import searchengine.model.web.Status;
+import searchengine.model.entity.Page;
+import searchengine.model.entity.Site;
+import searchengine.model.entity.Status;
 import searchengine.reposytories.IndexRepository;
 import searchengine.reposytories.LemmaRepository;
 import searchengine.reposytories.PageRepository;
@@ -27,13 +26,6 @@ import searchengine.reposytories.SiteRepository;
 import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.ForkJoinPool;
-
-import org.jsoup.Jsoup;
-import org.jsoup.nodes.Document;
-
-import javax.persistence.CascadeType;
-import javax.persistence.Column;
-import javax.persistence.OneToMany;
 
 
 @Service
@@ -97,7 +89,8 @@ public class StatisticsServiceImpl implements StatisticsService {
 
     ///////////++{
     @Override
-    public void startIndexing() { //полная индексация
+    @Async
+    public void startIndexing() {//полная индексация
         synchronized (lock) {
             if (indexingInProgress) {
                 throw new IllegalStateException("Индексация уже запущена");
@@ -119,7 +112,6 @@ public class StatisticsServiceImpl implements StatisticsService {
 
     }
 
-    @Transactional
     public void indexSingleSite(Site siteConfig) {//индексация сайта
         try {
             //Удаление старых данных
@@ -151,7 +143,7 @@ public class StatisticsServiceImpl implements StatisticsService {
         }
     }
 
-    @Transactional
+    //@Transactional бессмсленно
     public void savePages(Site site, Links links) {//сохранение страниц
         for (Links child : links.getChildLinks()) {
             Page page = new Page();
@@ -171,7 +163,7 @@ public class StatisticsServiceImpl implements StatisticsService {
     }
 
     @Override
-    @Transactional
+    //@Transactional
     public void handleSiteError(Site siteConfig, String errorMessage) {//метод обработки ошибок
         Site site = siteRepository.findByUrl(siteConfig.getUrl());
         if (site != null) {
@@ -193,7 +185,7 @@ public class StatisticsServiceImpl implements StatisticsService {
     }
 
     @Override
-    @Transactional
+    //@Transactional
     public void stopIndexing() {//остановка индексации
         synchronized (lock) {
             if (!indexingInProgress) {
@@ -210,7 +202,7 @@ public class StatisticsServiceImpl implements StatisticsService {
         }
     }
 
-    @Transactional
+    //@Transactional
     public void indexPage1(Site site, Page page) {
 
         LemmaFinder lemmaFinder;

@@ -1,4 +1,4 @@
-package searchengine.model.web;
+package searchengine.model.entity;
 
 public enum Status {
     INDEXING,

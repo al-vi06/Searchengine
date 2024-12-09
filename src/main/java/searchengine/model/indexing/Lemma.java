@@ -1,7 +1,7 @@
 package searchengine.model.indexing;
 
 import lombok.Data;
-import searchengine.model.web.Site;
+import searchengine.model.entity.Site;
 
 import javax.persistence.*;
 import java.util.List;

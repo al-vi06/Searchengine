@@ -1,10 +1,9 @@
-package searchengine.model.web;
+package searchengine.model.entity;
 
 import lombok.Data;
 import lombok.Getter;
 import lombok.Setter;
 import searchengine.model.indexing.Index;
-import searchengine.model.indexing.Lemma;
 
 import javax.persistence.*;
 import java.util.List;

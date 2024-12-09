@@ -56,31 +56,12 @@
         </createTable>
     </changeSet>
 
-     <changeSet id="4" author="IceCream">
-        <sql>
-            CREATE TYPE status_enum AS ENUM ('INDEXING', 'INDEXED', 'FAILED');
-        </sql>
-    </changeSet>
-
-    <!--
-        <changeSet id="4" author="Alex">
-            <sql>
-                DO $$
-                BEGIN
-                    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'status_enum') THEN
-                    CREATE TYPE status_enum AS ENUM ('INDEXING', 'INDEXED', 'FAILED');
-                END IF;
-                END $$;
-            </sql>
-         </changeSet>
-         -->
-
      <changeSet id="5" author="Alex">
          <createTable tableName="site">
              <column autoIncrement="true" name="id" type="INT">
                  <constraints nullable="false" primaryKey="true" primaryKeyName="pk_site"/>
              </column>
-             <column name="status" type="status_enum">
+             <column name="status" type="VARCHAR(255)">
                  <constraints nullable="false"/>
              </column>
              <column name="status_time" type="DATETIME">
