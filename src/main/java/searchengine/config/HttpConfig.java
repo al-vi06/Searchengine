@@ -1,4 +1,4 @@
-package searchengine.model.multithreading;
+package searchengine.config;
 
 import lombok.Data;
 import org.springframework.beans.factory.annotation.Value;

@@ -57,7 +57,7 @@
     </changeSet>
 
      <changeSet id="5" author="Alex">
-         <createTable tableName="site">
+         <createTable tableName="sitePage">
              <column autoIncrement="true" name="id" type="INT">
                  <constraints nullable="false" primaryKey="true" primaryKeyName="pk_site"/>
              </column>
@@ -78,7 +78,7 @@
      </changeSet>
 
      <changeSet id="6" author="Alex">
-         <addUniqueConstraint columnNames="url" constraintName="uc_site_url" tableName="site"/>
+         <addUniqueConstraint columnNames="url" constraintName="uc_site_url" tableName="sitePage"/>
      </changeSet>
 
      <changeSet id="7" author="Alex">
@@ -95,13 +95,15 @@
          <addForeignKeyConstraint baseColumnNames="page_id" baseTableName="index" constraintName="FK_INDEX_ON_PAGE"
                                   referencedColumnNames="id" referencedTableName="page"/>
      </changeSet>
+
      <changeSet id="10" author="Alex">
          <addForeignKeyConstraint baseColumnNames="site_id" baseTableName="lemma" constraintName="FK_LEMMA_ON_SITE"
-                                  referencedColumnNames="id" referencedTableName="site"/>
+                                  referencedColumnNames="id" referencedTableName="sitePage"/>
      </changeSet>
+
      <changeSet id="11" author="Alex">
          <addForeignKeyConstraint baseColumnNames="site_id" baseTableName="page" constraintName="FK_PAGE_ON_SITE"
-                                  referencedColumnNames="id" referencedTableName="site"/>
+                                  referencedColumnNames="id" referencedTableName="sitePage"/>
      </changeSet>
 
  </databaseChangeLog>

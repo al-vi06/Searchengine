@@ -1,4 +1,4 @@
-package searchengine.model.multithreading;
+package searchengine.entity.multithreading;
 
 import lombok.Data;
 

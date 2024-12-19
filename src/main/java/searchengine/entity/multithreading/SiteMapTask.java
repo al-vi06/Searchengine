@@ -1,4 +1,4 @@
-package searchengine.model.multithreading;
+package searchengine.entity.multithreading;
 
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -13,6 +13,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.RecursiveTask;
 import java.util.regex.Pattern;
 import org.jsoup.HttpStatusException;
+import searchengine.config.HttpConfig;
 
 public class SiteMapTask extends RecursiveTask<Links> {
     private final String url;

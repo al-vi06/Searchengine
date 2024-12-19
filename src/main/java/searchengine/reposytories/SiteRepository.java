@@ -1,15 +1,17 @@
 package searchengine.reposytories;
 
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.transaction.annotation.Transactional;
-import searchengine.model.entity.Site;
-import searchengine.model.entity.Status;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import searchengine.entity.Page;
+import searchengine.entity.SitePage;
 
-import java.util.List;
+public interface SiteRepository extends JpaRepository<SitePage, Integer> {
+//    @Transactional
+//    void deleteByUrl(String url);
+//    Site findByUrl(String url);
+//    List<Site> findAllByStatus(Status status);
+@Query(value = "select * from site s where s.url = :host limit 1", nativeQuery = true)
+Page getPageByUrl(@Param("host") String host);
 
-public interface SiteRepository extends JpaRepository<Site, Integer> {
-    @Transactional
-    void deleteByUrl(String url);
-    Site findByUrl(String url);
-    List<Site> findAllByStatus(Status status);
 }
