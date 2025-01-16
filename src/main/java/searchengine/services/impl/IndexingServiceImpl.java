@@ -1,7 +1,7 @@
 package searchengine.services.impl;
 
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -13,204 +13,146 @@ import searchengine.entity.SitePage;
 import searchengine.entity.Status;
 import searchengine.entity.indexing.Index;
 import searchengine.entity.indexing.Lemma;
-import searchengine.entity.indexing.LemmaFinder;
 import searchengine.entity.multithreading.Links;
 import searchengine.entity.multithreading.SiteMapTask;
 import searchengine.reposytories.LemmaRepository;
 import searchengine.reposytories.PageRepository;
 import searchengine.reposytories.SiteRepository;
 import searchengine.services.IndexingService;
+import searchengine.services.LemmaService;
+import searchengine.services.PageIndexerService;
 
 import java.io.IOException;
 import java.net.URL;
-import java.util.Date;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class IndexingServiceImpl implements IndexingService {
     private final SitesList sites;
+
     private final SiteRepository siteRepository;
+
     private final PageRepository pageRepository;
+
     private final LemmaRepository lemmaRepository;
-    private volatile boolean indexingInProgress = false;
-    private final Object lock = new Object();
 
-    @Autowired
+    private final SitesList sitesToIndexing;
+
+    private final Set<SitePage> sitePagesAllFromDB;
+
+    private final PageIndexerService pageIndexerService;
+
+    private final LemmaService lemmaService;
+    //private volatile boolean indexingInProgress = false;
+    //private final Object lock = new Object();
+    private AtomicBoolean indexingProcessing;
     private final HttpConfig httpConfig; //Инжекция HttpConfig
-    @Override
-    public void refreshPage(SitePage sitePage, URL url) {
-
-    }
 
     @Override
     @Async
-    public void startIndexing() {//полная индексация
-        synchronized (lock) {
-            if (indexingInProgress) {
-                throw new IllegalStateException("Индексация уже запущена");
-            }
-            indexingInProgress = true;
-        }
-
+    public void startIndexing(AtomicBoolean indexingProcessing) {
+        this.indexingProcessing = indexingProcessing;
         try {
-//            sites.getSites().parallelStream()
-//                    .forEach(siteConfig -> indexSingleSite(siteConfig));
-            for (Site site : sites.getSites() ) {
-                indexSingleSite(site);
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        finally {
-            synchronized (lock) {
-                indexingInProgress = false;
-            }
-        }
-
-    }
-
-    public void indexSingleSite(SitePage sitePageConfig) {//индексация сайта
-        try {
-            //Удаление старых данных
-            SitePage existingSitePage = siteRepository.findByUrl(sitePageConfig.getUrl());
-            if (existingSitePage != null) {
-                clearOldData(existingSitePage);
-            }
-
-//            String url = siteConfig.getUrl();
-//            siteRepository.deleteByUrl(url);
-//            pageRepository.deleteBySiteUrl(url);
-//            lemmaRepository.deleteBySiteUrl(url);
-
-            //Создание новой записи
-            SitePage sitePage = new SitePage();
-            sitePage.setName(sitePageConfig.getName());
-            sitePage.setUrl(sitePageConfig.getUrl());
-            sitePage.setStatus(Status.INDEXING);
-            sitePage.setStatusTime(new Date());
-            siteRepository.save(sitePage);
-
-            //Обход страниц
-            ForkJoinPool pool = new ForkJoinPool();
-            Links rootLinks = pool.invoke(new SiteMapTask(sitePageConfig.getUrl(), httpConfig));
-            savePages(sitePage, rootLinks);
-
-            //Установка статуса INDEXED
-            sitePage.setStatus(Status.INDEXED);
-            siteRepository.save(sitePage);
-
-        } catch (Exception e) {
-            handleSiteError(sitePageConfig, e.getMessage());
+            deleteSitePagesAndPagesInDB();
+            addSitePagesToDB();
+            indexAllSitePages();
+        } catch (RuntimeException | InterruptedException ex) {
+            indexingProcessing.set(false);
+            log.error("Error: ", ex);
         }
     }
 
-    @Transactional
-    public void clearOldData(SitePage sitePage) {
-        // Принудительная инициализация ленивых коллекций
-        sitePage.getPages().size();
-        sitePage.getLemmas().size();
+    private void deleteSitePagesAndPagesInDB() {
+        List<SitePage> sitesFromDB = siteRepository.findAll();
+        for (SitePage sitePageDb : sitesFromDB) {
+            for (Site siteApp : sitesToIndexing.getSites()) {
+                if (sitePageDb.getUrl().equals(siteApp.getUrl().toString())) {
+                    siteRepository.deleteById(sitePageDb.getId());
+                }
+            }
+        }
+    }
 
-        // Удаление данных из базы
-        String url = sitePage.getUrl();
-        pageRepository.deleteBySiteUrl(url);
-        lemmaRepository.deleteBySiteUrl(url);
+    private void addSitePagesToDB() {
+        for (Site siteApp : sitesToIndexing.getSites()) {
+            SitePage sitePageDAO = new SitePage();
+            sitePageDAO.setStatus(Status.INDEXING);
+            sitePageDAO.setName(siteApp.getName());
+            sitePageDAO.setUrl(siteApp.getUrl().toString());
+            siteRepository.save(sitePageDAO);
+        }
+    }
 
-        // Очистка коллекций
-        sitePage.getPages().clear();
-        sitePage.getLemmas().clear();
+    private void indexAllSitePages() throws InterruptedException {
+        sitePagesAllFromDB.addAll(siteRepository.findAll());
+        List<String> urlToIndexing = new ArrayList<>();
+        for (Site siteApp : sitesToIndexing.getSites()) {
+            urlToIndexing.add(siteApp.getUrl().toString());
+        }
+        sitePagesAllFromDB.removeIf(sitePage -> !urlToIndexing.contains(sitePage.getUrl()));
+
+        List<Thread> indexingThreadList = new ArrayList<>();
+        for (SitePage siteDomain : sitePagesAllFromDB) {
+            Runnable indexSite = () -> {
+                ConcurrentHashMap<String, Page> resultForkJoinPageIndexer = new ConcurrentHashMap<>();
+                try {
+                    log.info("Запущена индексация " + siteDomain.getUrl());
+                    new ForkJoinPool().invoke(new PageFinder(siteRepository, pageRepository, siteDomain, "",
+                            resultForkJoinPageIndexer, httpConfig, lemmaService, pageIndexerService, indexingProcessing));
+                } catch (SecurityException ex) {
+                    SitePage sitePage = siteRepository.findById(siteDomain.getId()).orElseThrow();
+                    sitePage.setStatus(Status.FAILED);
+                    sitePage.setLastError(ex.getMessage());
+                    siteRepository.save(sitePage);
+                }
+                if (!indexingProcessing.get()) {
+                    log.warn("Indexing stopped by user, site:" + siteDomain.getUrl());
+                    SitePage sitePage = siteRepository.findById(siteDomain.getId()).orElseThrow();
+                    sitePage.setStatus(Status.FAILED);
+                    sitePage.setLastError("Indexing stopped by user");
+                    siteRepository.save(sitePage);
+                } else {
+                    log.info("Проиндексирован сайт: " + siteDomain.getUrl());
+                    SitePage sitePage = siteRepository.findById(siteDomain.getId()).orElseThrow();
+                    sitePage.setStatus(Status.INDEXED);
+                    siteRepository.save(sitePage);
+                }
+
+            };
+            Thread thread = new Thread(indexSite);
+            indexingThreadList.add(thread);
+            thread.start();
+        }
+        for (Thread thread : indexingThreadList) {
+            thread.join();
+        }
+        indexingProcessing.set(false);
+    }
+
+    @Override
+    public void refreshPage(SitePage siteDomain, URL url) {
+        SitePage existSitePate = siteRepository.getSiteByUrl(siteDomain.getUrl());
+        siteDomain.setId(existSitePate.getId());
+        ConcurrentHashMap<String, Page> resultForkJoinPageIndexer = new ConcurrentHashMap<>();
+        try {
+            log.info("Запущена переиндексация страницы:" + url.toString());
+            PageFinder f = new PageFinder(siteRepository, pageRepository, siteDomain, url.getPath(), resultForkJoinPageIndexer, httpConfig, lemmaService, pageIndexerService, indexingProcessing);
+            f.refreshPage();
+        } catch (SecurityException ex) {
+            SitePage sitePage = siteRepository.findById(siteDomain.getId()).orElseThrow();
+            sitePage.setStatus(Status.FAILED);
+            sitePage.setLastError(ex.getMessage());
+            siteRepository.save(sitePage);
+        }
+        log.info("Проиндексирован сайт: " + siteDomain.getName());
+        SitePage sitePage = siteRepository.findById(siteDomain.getId()).orElseThrow();
+        sitePage.setStatus(Status.INDEXED);
         siteRepository.save(sitePage);
-
-//        String url = site.getUrl();
-//
-//        // Удаление данных через репозитории
-//        pageRepository.deleteBySiteUrl(url);
-//        lemmaRepository.deleteBySiteUrl(url);
-//
-//        // Не обращаемся к коллекциям напрямую
-//        siteRepository.save(site);
-    }
-
-    public void savePages(SitePage sitePage, Links links) {//сохранение страниц
-        for (Links child : links.getChildLinks()) {
-            Page page = new Page();
-            page.setSitePage(sitePage);
-            page.setPath(child.getUrl());
-            page.setCode(200); //успешный код
-            page.setContent(child.getContent());
-
-            sitePage.getPages().add(page); //Добавляем в существующую коллекцию
-            pageRepository.save(page);
-
-            sitePage.setStatusTime(new Date());
-            siteRepository.save(sitePage);
-
-            indexPage(sitePage, page);
-        }
-
-    }
-
-    @Override
-    public void handleSiteError(SitePage sitePageConfig, String errorMessage) {//метод обработки ошибок
-        SitePage sitePage = siteRepository.findByUrl(sitePageConfig.getUrl());
-        if (sitePage != null) {
-            sitePage.setStatus(Status.FAILED);
-            sitePage.setLastError(errorMessage);
-            siteRepository.save(sitePage);
-        }
-    }
-
-
-    @Override
-    public boolean isIndexing() {
-        return indexingInProgress;
-    }
-
-    @Override
-    public void stopIndexing() {//остановка индексации
-        synchronized (lock) {
-            if (!indexingInProgress) {
-                throw new IllegalStateException("Индексация не запущена");
-            }
-            indexingInProgress = false;
-        }
-
-        List<SitePage> sitesInProgresses = siteRepository.findAllByStatus(Status.INDEXING);
-        for (SitePage sitePage : sitesInProgresses) {
-            sitePage.setStatus(Status.FAILED);
-            sitePage.setLastError("Индексация остановлена пользователем");
-            siteRepository.save(sitePage);
-        }
-    }
-
-    public void indexPage(SitePage sitePage, Page page) {
-        LemmaFinder lemmaFinder;
-        try {
-            lemmaFinder = LemmaFinder.getInstance();
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-
-        String cleanHtml = lemmaFinder.cleanHtmlTags(page.getContent());
-        Map<String, Integer> lemmas = lemmaFinder.collectLemmas(cleanHtml);
-        lemmas.forEach((key, value) -> {
-            Lemma lemma = new Lemma();
-            lemma.setSitePage(sitePage);
-            lemma.setLemma(key);
-            lemma.setFrequency(value);
-            //List<Index> indexes;
-            lemmaRepository.save(lemma);
-
-            Index index =new Index();
-            index.setLemma(lemma);
-            index.setPage(page);
-            index.setRank(value);
-            indexRepository.save(index);
-        });
-
 
     }
 

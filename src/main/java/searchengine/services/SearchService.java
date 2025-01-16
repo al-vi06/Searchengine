@@ -1,7 +1,6 @@
 package searchengine.services;
 
 import org.springframework.http.ResponseEntity;
-
 import java.io.IOException;
 
 public interface SearchService {

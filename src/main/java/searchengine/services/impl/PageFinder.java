@@ -5,14 +5,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.select.Elements;
-import searchengine.config.Connection;
-import searchengine.model.Page;
-import searchengine.model.SitePage;
-import searchengine.repository.PageRepository;
-import searchengine.repository.SiteRepository;
+import searchengine.config.HttpConfig;
+import searchengine.entity.Page;
+import searchengine.entity.SitePage;
 import searchengine.services.LemmaService;
 import searchengine.services.PageIndexerService;
-
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -23,6 +20,9 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.RecursiveAction;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import searchengine.reposytories.PageRepository;
+import searchengine.reposytories.SiteRepository;
+
 @Slf4j
 @RequiredArgsConstructor
 public class PageFinder extends RecursiveAction {
@@ -31,18 +31,18 @@ public class PageFinder extends RecursiveAction {
     private final SiteRepository siteRepository;
     private final PageRepository pageRepository;
     private final AtomicBoolean indexingProcessing;
-    private final Connection connection;
+    private final HttpConfig httpConfig;
     private final Set<String> urlSet = new HashSet<>();
     private final String page;
     private final SitePage siteDomain;
     private final ConcurrentHashMap<String, Page> resultForkJoinPoolIndexedPages;
 
-    public PageFinder(SiteRepository siteRepository, PageRepository pageRepository, SitePage siteDomain, String page, ConcurrentHashMap<String, Page> resultForkJoinPoolIndexedPages, Connection connection, LemmaService lemmaService, PageIndexerService pageIndexerService, AtomicBoolean indexingProcessing) {
+    public PageFinder(SiteRepository siteRepository, PageRepository pageRepository, SitePage siteDomain, String page, ConcurrentHashMap<String, Page> resultForkJoinPoolIndexedPages, HttpConfig httpConfig, LemmaService lemmaService, PageIndexerService pageIndexerService, AtomicBoolean indexingProcessing) {
         this.siteRepository = siteRepository;
         this.pageRepository = pageRepository;
         this.page = page;
         this.resultForkJoinPoolIndexedPages = resultForkJoinPoolIndexedPages;
-        this.connection = connection;
+        this.httpConfig = httpConfig;
         this.indexingProcessing = indexingProcessing;
         this.siteDomain = siteDomain;
         this.lemmaService = lemmaService;
@@ -59,7 +59,7 @@ public class PageFinder extends RecursiveAction {
         indexingPage.setSiteId(siteDomain.getId());
 
         try {
-            org.jsoup.Connection connect = Jsoup.connect(siteDomain.getUrl() + page).userAgent(connection.getUserAgent()).referrer(connection.getReferer());
+            org.jsoup.Connection connect = Jsoup.connect(siteDomain.getUrl() + page).userAgent(httpConfig.getUserAgent()).referrer(httpConfig.getReferrer());
             Document doc = connect.timeout(60000).get();
 
             indexingPage.setContent(doc.head() + String.valueOf(doc.body()));
@@ -97,7 +97,9 @@ public class PageFinder extends RecursiveAction {
         List<PageFinder> indexingPagesTasks = new ArrayList<>();
         for (String url : urlSet) {
             if (resultForkJoinPoolIndexedPages.get(url) == null && indexingProcessing.get()) {
-                PageFinder task = new PageFinder(siteRepository, pageRepository, sitePage, url, resultForkJoinPoolIndexedPages, connection, lemmaService, pageIndexerService, indexingProcessing);
+                PageFinder task = new PageFinder(siteRepository, pageRepository, sitePage,
+                        url, resultForkJoinPoolIndexedPages, httpConfig,
+                        lemmaService, pageIndexerService, indexingProcessing);
                 task.fork();
                 indexingPagesTasks.add(task);
             }
@@ -118,7 +120,7 @@ public class PageFinder extends RecursiveAction {
         indexingPage.setSiteId(siteDomain.getId());
 
         try {
-            org.jsoup.Connection connect = Jsoup.connect(siteDomain.getUrl() + page).userAgent(connection.getUserAgent()).referrer(connection.getReferer());
+            org.jsoup.Connection connect = Jsoup.connect(siteDomain.getUrl() + page).userAgent(httpConfig.getUserAgent()).referrer(httpConfig.getReferrer());
             Document doc = connect.timeout(60000).get();
             indexingPage.setContent(doc.head() + String.valueOf(doc.body()));
             indexingPage.setCode(doc.connection().response().statusCode());

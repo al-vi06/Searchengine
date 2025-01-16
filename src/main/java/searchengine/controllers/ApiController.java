@@ -18,6 +18,8 @@ import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 @RestController
@@ -30,6 +32,7 @@ public class ApiController {
     private final IndexingService indexingService;
     private final SearchService searchService;
     private final AtomicBoolean indexingProcessing = new AtomicBoolean(false);
+    private final ExecutorService executor = Executors.newSingleThreadExecutor();
 
     @GetMapping("/statistics")
     public ResponseEntity<StatisticsResponse> statistics() throws MalformedURLException {
@@ -44,8 +47,13 @@ public class ApiController {
                     "error", "Индексация уже запущена"
             ));
         }
-        indexingService.startIndexing();
-        return ResponseEntity.ok(Map.of("result", true));
+//        indexingService.startIndexing();
+//        return ResponseEntity.ok(Map.of("result", true));
+        executor.submit(() -> {
+            indexingProcessing.set(true);
+            indexingService.startIndexing(indexingProcessing);
+        });
+        return ResponseEntity.status(HttpStatus.OK).body(new OkResponse());
     }
 
     @GetMapping("/stopIndexing")

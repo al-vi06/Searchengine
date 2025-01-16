@@ -22,9 +22,9 @@ public class Page {
     @Column(columnDefinition = "INT", nullable = false)
     private int id;
 
-    @ManyToOne
+    //@ManyToOne
     @JoinColumn(name = "site_id", nullable = false)
-    private SitePage sitePage;
+    private int siteId;
 
     @Column(columnDefinition = "TEXT", nullable = false)
     private String path;

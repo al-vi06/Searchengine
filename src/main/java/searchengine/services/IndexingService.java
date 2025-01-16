@@ -1,16 +1,17 @@
 package searchengine.services;
 
+import org.springframework.scheduling.annotation.Async;
 import searchengine.entity.SitePage;
 
 import java.net.URL;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public interface IndexingService {
-    void startIndexing(); //AtomicBoolean indexingProcessing
+    //@Async
+    //void startIndexing();
+    @Async
+    void startIndexing(AtomicBoolean indexingProcessing);
+
     void refreshPage(SitePage sitePage, URL url);
 
-
-
-    boolean isIndexing();
-    void stopIndexing();
 }
