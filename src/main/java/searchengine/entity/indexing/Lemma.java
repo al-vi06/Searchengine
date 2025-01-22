@@ -2,6 +2,8 @@ package searchengine.entity.indexing;
 
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
 import searchengine.entity.SitePage;
 
 import javax.persistence.*;
@@ -19,33 +21,19 @@ public class Lemma {
     private int id;
 
     @ManyToOne
-    @JoinColumn(name = "site_id", nullable = false)
-    private SitePage sitePage;
+    @OnDelete(action = OnDeleteAction.CASCADE)
+    @JoinColumn(name = "site_id", insertable = false, updatable = false, nullable = false)
+    private SitePage site;
 
-    @Column(columnDefinition = "VARCHAR(255)")
+    @Column(columnDefinition = "VARCHAR(255)", nullable = false)
     private String lemma;
 
     @Column(name = "frequency", nullable = false)
     private int frequency;
 
+    //связь с Index
     @OneToMany(mappedBy = "lemma", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<Index> indexes = new ArrayList<>();
-
-//    @Override
-//    public boolean equals(Object obj) {
-//        Lemma l = (Lemma) obj;
-//        return lemma.equals(l.lemma) && site == l.site;
-//    }
-//
-//    @Override
-//    public int hashCode() {
-//        return lemma.hashCode() + site.hashCode();
-//    }
-//
-//    @Override
-//    public String toString() {
-//        return "id: " + id + "; lemma: " + lemma + "; frequency: " + frequency + "; site: " + site.getName();
-//    }
+    private List<Index> index = new ArrayList<>();
 
 
 }

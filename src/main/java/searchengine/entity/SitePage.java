@@ -12,6 +12,7 @@ import javax.persistence.*;
 @Data
 @Entity
 @NoArgsConstructor
+@Table(name = "site")
 public class SitePage {
 
     @Id
@@ -20,7 +21,7 @@ public class SitePage {
     private int id;
 
     @Enumerated(EnumType.STRING)
-    @Column(columnDefinition = "ENUM('INDEXING', 'INDEXED', 'FAILED')", nullable = false)
+    @Column(nullable = false) //columnDefinition = "ENUM('INDEXING', 'INDEXED', 'FAILED')",
     private Status status;
 
     @Column(columnDefinition = "DATETIME", nullable = false)
@@ -35,25 +36,10 @@ public class SitePage {
     @Column(columnDefinition = "VARCHAR(255)", nullable = false)
     private String name;
 
-    @OneToMany(mappedBy = "sitePage", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "site", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Page> pages = new ArrayList<>();
 
-    @OneToMany(mappedBy = "sitePage", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "site", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Lemma> lemmas = new ArrayList<>();
-
-//    @Override
-//    public String toString() {
-//        return "id: " + id + ", url: " + url + ", name: " + name;
-//    }
-//
-//    @Override
-//    public int hashCode() {
-//        return url.hashCode();
-//    }
-//
-//    @Override
-//    public boolean equals(Object obj) {
-//        return obj.getClass() == Site.class;
-//    }
 
 }

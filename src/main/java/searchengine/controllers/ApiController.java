@@ -41,7 +41,7 @@ public class ApiController {
 
     @GetMapping("/startIndexing")
     public ResponseEntity<?> startIndexing() {
-        if (indexingService.isIndexing()) {
+        if (indexingProcessing.get()) {
             return ResponseEntity.badRequest().body(Map.of(
                     "result", false,
                     "error", "Индексация уже запущена"
@@ -58,13 +58,13 @@ public class ApiController {
 
     @GetMapping("/stopIndexing")
     public ResponseEntity<?> stopIndexing() {
-        if (!indexingService.isIndexing()) {
+        if (!indexingProcessing.get()) {
             return ResponseEntity.badRequest().body(Map.of(
                     "result", false,
                     "error", "Индексация не запущена"
             ));
         }
-        indexingService.stopIndexing();
+        indexingProcessing.set(false);
         return ResponseEntity.ok(Map.of("result", true));
     }
 

@@ -7,36 +7,27 @@
         objectQuotingStrategy="QUOTE_ONLY_RESERVED_WORDS">
 
     <changeSet id="1" author="Alex">
-        <createTable tableName="index">
+        <createTable tableName="site">
             <column autoIncrement="true" name="id" type="INT">
-                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_index"/>
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_site"/>
             </column>
-            <column name="page_id" type="INT">
+            <column name="status" type="VARCHAR(255)">
                 <constraints nullable="false"/>
             </column>
-            <column name="lemma_id" type="INT">
+            <column name="status_time" type="DATETIME">
                 <constraints nullable="false"/>
             </column>
-            <column name="rank" type="FLOAT"/>
-        </createTable>
-    </changeSet>
-
-    <changeSet id="2" author="Alex">
-        <createTable tableName="lemma">
-            <column autoIncrement="true" name="id" type="INT">
-                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_lemma"/>
-            </column>
-            <column name="site_id" type="INT">
+            <column name="last_error" type="TEXT"/>
+            <column name="url" type="VARCHAR(255)">
                 <constraints nullable="false"/>
             </column>
-            <column name="lemma" type="VARCHAR(255)"/>
-            <column name="frequency" type="INT">
+            <column name="name" type="VARCHAR(255)">
                 <constraints nullable="false"/>
             </column>
         </createTable>
     </changeSet>
 
-    <changeSet id="3" author="Alex">
+    <changeSet id="2" author="Alex">
         <createTable tableName="page">
             <column autoIncrement="true" name="id" type="INT">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="pk_page"/>
@@ -56,54 +47,66 @@
         </createTable>
     </changeSet>
 
+    <changeSet id="3" author="Alex">
+        <createTable tableName="lemma">
+            <column autoIncrement="true" name="id" type="INT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_lemma"/>
+            </column>
+            <column name="site_id" type="INT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="lemma" type="VARCHAR(255)"/>
+            <column name="frequency" type="INT">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+
+    <changeSet id="4" author="Alex">
+        <createTable tableName="index">
+            <column autoIncrement="true" name="id" type="INT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_index"/>
+            </column>
+            <column name="page_id" type="INT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="lemma_id" type="INT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="rank" type="FLOAT"/>
+        </createTable>
+    </changeSet>
+
+
      <changeSet id="5" author="Alex">
-         <createTable tableName="sitePage">
-             <column autoIncrement="true" name="id" type="INT">
-                 <constraints nullable="false" primaryKey="true" primaryKeyName="pk_site"/>
-             </column>
-             <column name="status" type="VARCHAR(255)">
-                 <constraints nullable="false"/>
-             </column>
-             <column name="status_time" type="DATETIME">
-                 <constraints nullable="false"/>
-             </column>
-             <column name="last_error" type="TEXT"/>
-             <column name="url" type="VARCHAR(255)">
-                 <constraints nullable="false"/>
-             </column>
-             <column name="name" type="VARCHAR(255)">
-                 <constraints nullable="false"/>
-             </column>
-         </createTable>
+         <addUniqueConstraint columnNames="url" constraintName="uc_site_url" tableName="site"/>
      </changeSet>
 
      <changeSet id="6" author="Alex">
-         <addUniqueConstraint columnNames="url" constraintName="uc_site_url" tableName="sitePage"/>
-     </changeSet>
-
-     <changeSet id="7" author="Alex">
-         <createIndex indexName="idx_page_path" tableName="page">
+         <createIndex indexName="idx_page_path" tableName="page" unique="true">
              <column name="path"/>
          </createIndex>
      </changeSet>
 
-     <changeSet id="8" author="Alex">
+     <changeSet id="7" author="Alex">
          <addForeignKeyConstraint baseColumnNames="lemma_id" baseTableName="index" constraintName="FK_INDEX_ON_LEMMA"
                                   referencedColumnNames="id" referencedTableName="lemma"/>
      </changeSet>
-     <changeSet id="9" author="Alex">
+     <changeSet id="8" author="Alex">
          <addForeignKeyConstraint baseColumnNames="page_id" baseTableName="index" constraintName="FK_INDEX_ON_PAGE"
                                   referencedColumnNames="id" referencedTableName="page"/>
      </changeSet>
 
-     <changeSet id="10" author="Alex">
+     <changeSet id="9" author="Alex">
          <addForeignKeyConstraint baseColumnNames="site_id" baseTableName="lemma" constraintName="FK_LEMMA_ON_SITE"
-                                  referencedColumnNames="id" referencedTableName="sitePage"/>
+                                  referencedColumnNames="id" referencedTableName="site"/>
      </changeSet>
 
-     <changeSet id="11" author="Alex">
+     <changeSet id="10" author="Alex">
          <addForeignKeyConstraint baseColumnNames="site_id" baseTableName="page" constraintName="FK_PAGE_ON_SITE"
-                                  referencedColumnNames="id" referencedTableName="sitePage"/>
+                                  referencedColumnNames="id" referencedTableName="site"
+                                  onDelete="CASCADE"/>
      </changeSet>
+
 
  </databaseChangeLog>

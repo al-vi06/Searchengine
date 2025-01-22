@@ -48,6 +48,7 @@ public class IndexingServiceImpl implements IndexingService {
     private final PageIndexerService pageIndexerService;
 
     private final LemmaService lemmaService;
+
     //private volatile boolean indexingInProgress = false;
     //private final Object lock = new Object();
     private AtomicBoolean indexingProcessing;

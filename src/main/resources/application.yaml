@@ -3,8 +3,8 @@ server:
 
 spring:
   datasource:
-    username: skillbox
-    password: skillbox
+    username: skillbox #root
+    password: skillbox #1234
     url: jdbc:postgresql://localhost:5432/search_engine
     driver-class-name: org.postgresql.Driver
   jpa:

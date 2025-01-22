@@ -1,7 +1,5 @@
 package searchengine.entity;
 
 public enum Status {
-    INDEXING,
-    INDEXED,
-    FAILED
+    INDEXING, INDEXED, FAILED
 }

@@ -1,9 +1,11 @@
 package searchengine.entity.indexing;
 
+import com.sun.istack.NotNull;
 import lombok.Data;
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
 import searchengine.entity.Page;
 import javax.persistence.*;
-
 
 @Data
 @Entity
@@ -16,33 +18,17 @@ public class Index {
     private int id;
 
     @ManyToOne
-    @JoinColumn(name = "page_id", nullable = false)
+    @OnDelete(action = OnDeleteAction.CASCADE)
+    @JoinColumn(name = "page_id", insertable = false, updatable = false, nullable = false)
     private Page page;
 
     @ManyToOne
-    @JoinColumn(name = "lemma_id", nullable = false)
+    @OnDelete(action = OnDeleteAction.CASCADE)
+    @JoinColumn(name = "lemma_id", insertable = false, updatable = false, nullable = false)
     private Lemma lemma;
 
-    @Column(name = "`rank`", columnDefinition = "FLOAT")
-    private double rank;
+    @Column(name = "rank", columnDefinition = "FLOAT", nullable = false)//`rank`
+    private float rank;
 
-//    @Override
-//    public boolean equals(Object obj) {
-//        if (obj.getClass() != getClass()) {
-//            return false;
-//        }
-//        Index i = (Index) obj;
-//        return id == i.id;
-//    }
-//
-//    @Override
-//    public int hashCode() {
-//        return id + page.hashCode() + lemma.hashCode();
-//    }
-//
-//    @Override
-//    public String toString() {
-//        return "id: " + id + "; page: " + page.getPath() + "; lemma: " + lemma.getLemma();
-//    }
 
 }

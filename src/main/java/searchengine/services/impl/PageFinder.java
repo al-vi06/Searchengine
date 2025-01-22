@@ -56,7 +56,7 @@ public class PageFinder extends RecursiveAction {
         }
         Page indexingPage = new Page();
         indexingPage.setPath(page);
-        indexingPage.setSiteId(siteDomain.getId());
+        //indexingPage.setSite(siteDomain.getId()); //!!!!!
 
         try {
             org.jsoup.Connection connect = Jsoup.connect(siteDomain.getUrl() + page).userAgent(httpConfig.getUserAgent()).referrer(httpConfig.getReferrer());
@@ -64,7 +64,7 @@ public class PageFinder extends RecursiveAction {
 
             indexingPage.setContent(doc.head() + String.valueOf(doc.body()));
             if (indexingPage.getContent() == null || indexingPage.getContent().isEmpty() || indexingPage.getContent().isBlank()) {
-                throw new Exception("Content of site id:" + indexingPage.getSiteId() + ", page:" + indexingPage.getPath() + " is null or empty");
+                throw new Exception("Content of site id:" + indexingPage.getSite() + ", page:" + indexingPage.getPath() + " is null or empty");
             }
             Elements pages = doc.getElementsByTag("a");
             for (org.jsoup.nodes.Element element : pages)
@@ -82,7 +82,7 @@ public class PageFinder extends RecursiveAction {
             sitePage.setStatusTime(Timestamp.valueOf(LocalDateTime.now()));
             siteRepository.save(sitePage);
             pageRepository.save(indexingPage);
-            log.debug("ERROR INDEXATION, siteId:" + indexingPage.getSiteId() + ", path:" + indexingPage.getPath() + ",code:" + indexingPage.getCode() + ", error:" + ex.getMessage());
+            log.debug("ERROR INDEXATION, siteId:" + indexingPage.getSite() + ", path:" + indexingPage.getPath() + ",code:" + indexingPage.getCode() + ", error:" + ex.getMessage());
             return;
         }
         if (resultForkJoinPoolIndexedPages.get(page) != null || !indexingProcessing.get()) {
@@ -117,7 +117,7 @@ public class PageFinder extends RecursiveAction {
 
         Page indexingPage = new Page();
         indexingPage.setPath(page);
-        indexingPage.setSiteId(siteDomain.getId());
+        //indexingPage.setSite(siteDomain.getId()); //!!!!!!!
 
         try {
             org.jsoup.Connection connect = Jsoup.connect(siteDomain.getUrl() + page).userAgent(httpConfig.getUserAgent()).referrer(httpConfig.getReferrer());
@@ -125,7 +125,7 @@ public class PageFinder extends RecursiveAction {
             indexingPage.setContent(doc.head() + String.valueOf(doc.body()));
             indexingPage.setCode(doc.connection().response().statusCode());
             if (indexingPage.getContent() == null || indexingPage.getContent().isEmpty() || indexingPage.getContent().isBlank()) {
-                throw new Exception("Content of site id:" + indexingPage.getSiteId() + ", page:" + indexingPage.getPath() + " is null or empty");
+                throw new Exception("Content of site id:" + indexingPage.getSite() + ", page:" + indexingPage.getPath() + " is null or empty");
             }
         } catch (Exception ex) {
             errorHandling(ex, indexingPage);
