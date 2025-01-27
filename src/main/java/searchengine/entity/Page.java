@@ -20,11 +20,8 @@ public class Page {
     private int id;
 
     @ManyToOne
-    @JoinColumn(name = "site_id", nullable = false, insertable = false, updatable = false)
+    @JoinColumn(name = "site_id", nullable = false) //insertable = false, updatable = false
     private SitePage site;
-
-//    @Column(name = "site_id", nullable = false)
-//    private int siteId;
 
     @Column(columnDefinition = "TEXT", nullable = false)
     private String path;
@@ -38,6 +35,5 @@ public class Page {
     //связь с Index
     @OneToMany(mappedBy = "page", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Index> index = new ArrayList<>();
-
 
 }

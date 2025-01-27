@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
-  <component name="AmplicodeJpaIdeaProjectConfig">
+  <component name="AmplicodeJpaIdeaProjectConfig" ddlActionDbType="postgres">
     <option name="defaultUnitInitialized" value="true" />
     <option name="renamerInitialized" value="true" />
     <option name="sourceDbValue" value="a3ac183d-aace-48b2-b8b8-a364b549b91b" />

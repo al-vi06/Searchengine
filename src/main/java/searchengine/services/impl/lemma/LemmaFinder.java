@@ -1,4 +1,4 @@
-package searchengine.services.impl;
+package searchengine.services.impl.lemma;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -129,7 +129,7 @@ public class LemmaFinder {
         document.select("script, style, noscript").remove();
 
         //Удаляем комментарии
-        document.outputSettings().prettyPrint(false); // Чтобы избежать перезаписи текста в комментариях
+        document.outputSettings().prettyPrint(false); //Чтобы избежать перезаписи текста в комментариях
         String withoutComments = document.html().replaceAll("<!--.*?-->", "");
 
         //Убираем HTML-теги, оставляем только текст

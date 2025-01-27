@@ -13,7 +13,7 @@ public interface LemmaRepository extends JpaRepository<Lemma, Integer> {
 @Query(value = "select * from lemma t where t.lemma = :lemma and t.site_id = :siteId for update", nativeQuery = true)
 Lemma lemmaExist(String lemma, Integer siteId);
 
-    @Query(value = "select count(l) from Lemma l where l.site = :siteId")
+    @Query(value = "select count(l) from Lemma l where l.site.id = :siteId")
     Integer findCountRecordBySiteId(Integer siteId);
 
     @Query(value = "select l.frequency from Lemma l where l.lemma = :lemma and (:siteId is null or l.site = :siteId)")

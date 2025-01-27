@@ -41,19 +41,20 @@ public class ApiController {
 
     @GetMapping("/startIndexing")
     public ResponseEntity<?> startIndexing() {
+        //indexingService.startIndexing();
         if (indexingProcessing.get()) {
             return ResponseEntity.badRequest().body(Map.of(
                     "result", false,
                     "error", "Индексация уже запущена"
             ));
         }
-//        indexingService.startIndexing();
-//        return ResponseEntity.ok(Map.of("result", true));
-        executor.submit(() -> {
+
+        //executor.submit(() -> {
             indexingProcessing.set(true);
             indexingService.startIndexing(indexingProcessing);
-        });
-        return ResponseEntity.status(HttpStatus.OK).body(new OkResponse());
+        //});
+
+        return ResponseEntity.ok(Map.of("result", true));
     }
 
     @GetMapping("/stopIndexing")
@@ -79,12 +80,14 @@ public class ApiController {
                 return sitePage;
             }).orElseThrow();
         } catch (RuntimeException ex) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).
-                    body(new NotOkResponse("Данная страница находится за пределами сайтов указанных в конфигурационном файле"));
+            return ResponseEntity.badRequest().body(Map.of(
+                    "result", false,
+                    "error", "Данная страница находится за пределами сайтов указанных в конфигурационном файле"
+            ));
         }
 
         indexingService.refreshPage(sitePage, refUrl);
-        return ResponseEntity.status(HttpStatus.OK).body(new OkResponse());
+        return ResponseEntity.ok(Map.of("result", true));
 
     }
 
@@ -96,8 +99,12 @@ public class ApiController {
             @RequestParam(required = false, defaultValue = "20") Integer limit
     ) throws IOException {
         if (query == null || query.isBlank()) {
-            return ResponseEntity.badRequest().body(new NotOkResponse("Задан пустой поисковый запрос"));
+            //return ResponseEntity.badRequest().body(new NotOkResponse("Задан пустой поисковый запрос"));
+            return ResponseEntity.badRequest().body(Map.of(
+                    "result", false,
+                    "error", "Задан пустой поисковый запрос"));
         }
+
         return searchService.search(query, site, offset, limit);
     }
 

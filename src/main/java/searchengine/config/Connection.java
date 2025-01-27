@@ -2,20 +2,22 @@ package searchengine.config;
 
 import lombok.Data;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.PostConstruct;
 
 @Component
 @Data
-public class HttpConfig {
-    @Value("${http.user-agent}")
+@ConfigurationProperties(prefix = "connection-settings")
+public class Connection {
+    @Value("${connection-settings.user-agent}")
     private String userAgent;
 
-    @Value("${http.referrer}")
+    @Value("${connection-settings.referrer}")
     private String referrer;
 
-    @Value("${http.timeout}")
+    @Value("${connection-settings.timeout}")
     private int timeout;
 
     @PostConstruct

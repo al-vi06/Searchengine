@@ -1,4 +1,4 @@
-package searchengine.services.impl;
+package searchengine.services.impl.lemma;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
