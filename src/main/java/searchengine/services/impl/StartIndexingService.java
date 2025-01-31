@@ -1,4 +1,4 @@
-package searchengine.services.impl.indexing;
+package searchengine.services.impl;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -7,7 +7,6 @@ import org.springframework.stereotype.Service;
 import searchengine.config.Connection;
 import searchengine.config.Site;
 import searchengine.config.SitesList;
-import searchengine.entity.Page;
 import searchengine.entity.SitePage;
 import searchengine.entity.Status;
 import searchengine.reposytories.LemmaRepository;
@@ -20,9 +19,7 @@ import searchengine.services.PageIndexerService;
 
 import java.net.URL;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 @Service
@@ -105,9 +102,7 @@ public class StartIndexingService implements IndexingService {
                 //ConcurrentHashMap<String, Page> resultForkJoinPageIndexer = new ConcurrentHashMap<>();
                 try {
                     log.info("Запущена индексация " + urlSite);
-
-
-                    PageFinder pageFinder = new PageFinder(urlSite, new ConcurrentLinkedQueue<>(), siteUrl,
+                    PageFinder pageFinder = new PageFinder(urlSite, urlSite, new ConcurrentLinkedQueue<>(), siteUrl,
                             connection, siteRepository, pageRepository,
                             lemmaService, pageIndexerService, indexingProcessing);
                     pageFinder.compute();
@@ -118,7 +113,7 @@ public class StartIndexingService implements IndexingService {
 
 
                 } catch (SecurityException ex) {
-                    SitePage sitePage = siteRepository.findById(siteUrl.getId()).orElseThrow();
+                    SitePage sitePage = siteRepository.findByIdWithPages(siteUrl.getId()).orElseThrow();
                     sitePage.setStatus(Status.FAILED);
                     sitePage.setLastError(ex.getMessage());
                     siteRepository.save(sitePage);
@@ -126,13 +121,13 @@ public class StartIndexingService implements IndexingService {
 
                 if (!indexingProcessing.get()) {
                     log.warn("Indexing stopped by user, site:" + urlSite);
-                    SitePage sitePage = siteRepository.findById(siteUrl.getId()).orElseThrow();
+                    SitePage sitePage = siteRepository.findByIdWithPages(siteUrl.getId()).orElseThrow();
                     sitePage.setStatus(Status.FAILED);
                     sitePage.setLastError("Indexing stopped by user");
                     siteRepository.save(sitePage);
                 } else {
                     log.info("Indexed site: " + urlSite);
-                    SitePage sitePage = siteRepository.findById(siteUrl.getId()).orElseThrow();
+                    SitePage sitePage = siteRepository.findByIdWithPages(siteUrl.getId()).orElseThrow();
                     sitePage.setStatus(Status.INDEXED);
                     siteRepository.save(sitePage);
                 }
@@ -156,21 +151,24 @@ public class StartIndexingService implements IndexingService {
     public void refreshPage(SitePage site, URL url) {
         SitePage existSitePate = siteRepository.getSiteByUrl(site.getUrl());
         site.setId(existSitePate.getId());
-        ConcurrentHashMap<String, Page> resultForkJoinPageIndexer = new ConcurrentHashMap<>();
+        //ConcurrentHashMap<String, Page> resultForkJoinPageIndexer = new ConcurrentHashMap<>();
         try {
             log.info("Запущена переиндексация страницы:" + url.toString());
-            //reindexing
+            PageFinder pageFinder = new PageFinder(url.toString(), new ConcurrentLinkedQueue<>(), existSitePate,
+                    connection, siteRepository, pageRepository,
+                    lemmaService, pageIndexerService, indexingProcessing);
+            pageFinder.refreshPage();
         } catch (SecurityException ex) {
-            SitePage sitePage = siteRepository.findById(site.getId()).orElseThrow();
+            SitePage sitePage = siteRepository.findByIdWithPages(site.getId()).orElseThrow();
             sitePage.setStatus(Status.FAILED);
             sitePage.setLastError(ex.getMessage());
             siteRepository.save(sitePage);
         }
+
         log.info("Проиндексирован сайт: " + site.getName());
-        SitePage sitePage = siteRepository.findById(site.getId()).orElseThrow();
+        SitePage sitePage = siteRepository.findByIdWithPages(site.getId()).orElseThrow();
         sitePage.setStatus(Status.INDEXED);
         siteRepository.save(sitePage);
-
     }
 
 }

@@ -1,4 +1,4 @@
-package searchengine.services.impl.lemma;
+package searchengine.services.impl;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -10,29 +10,38 @@ import org.apache.lucene.morphology.LuceneMorphology;
 import org.apache.lucene.morphology.russian.RussianLuceneMorphology;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
+import org.springframework.stereotype.Service;
+import searchengine.services.LemmaService;
 
+
+@Service
 @Slf4j
-public class LemmaFinder {
+public class LemmaFinder implements LemmaService {
     private final LuceneMorphology luceneMorphology;
     private static final String WORD_TYPE_REGEX = "\\W\\w&&[^а-яА-Я\\s]";
     private static final String[] particlesNames = new String[]{"МЕЖД", "ПРЕДЛ", "СОЮЗ"};
 
-    public static LemmaFinder getInstance() throws IOException {
+//    public static LemmaFinder getInstance() throws IOException {
+//        LuceneMorphology morphology= new RussianLuceneMorphology();
+//        return new LemmaFinder(morphology);
+//    }
+//
+//    private LemmaFinder(LuceneMorphology luceneMorphology) {
+//        this.luceneMorphology = luceneMorphology;
+//    }
+
+//    private LemmaFinder(){
+//        throw new RuntimeException("Disallow construct");
+//    }
+
+    public LemmaFinder() throws IOException {
         LuceneMorphology morphology= new RussianLuceneMorphology();
-        return new LemmaFinder(morphology);
+        this.luceneMorphology = morphology;
     }
 
-    private LemmaFinder(LuceneMorphology luceneMorphology) {
-        this.luceneMorphology = luceneMorphology;
-    }
-
-    private LemmaFinder(){
-        throw new RuntimeException("Disallow construct");
-    }
 
     /**
      * Метод разделяет текст на слова, находит все леммы и считает их количество.
-     *
      * @param text текст из которого будут выбираться леммы
      * @return ключ является леммой, а значение количеством найденных лемм
      */
@@ -117,8 +126,8 @@ public class LemmaFinder {
         return true;
     }
 
-    //++
-    public static String cleanHtmlTags(String htmlCode) {
+    //++ реализовал метод очистки страницы, оставляем только текст
+    public String cleanHtmlTags(String htmlCode) {
         if (htmlCode == null || htmlCode.isEmpty()) {
             return "";
         }

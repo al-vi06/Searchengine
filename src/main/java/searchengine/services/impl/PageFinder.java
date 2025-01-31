@@ -1,4 +1,4 @@
-package searchengine.services.impl.indexing;
+package searchengine.services.impl;
 
 import lombok.extern.slf4j.Slf4j;
 import org.jsoup.Jsoup;
@@ -11,14 +11,15 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Queue;
-import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.RecursiveAction;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Pattern;
 
+import org.springframework.stereotype.Service;
 import searchengine.config.Connection;
 import searchengine.entity.Page;
 import searchengine.entity.SitePage;
+import searchengine.entity.Status;
 import searchengine.reposytories.PageRepository;
 import searchengine.reposytories.SiteRepository;
 import searchengine.services.LemmaService;
@@ -47,10 +48,26 @@ public class PageFinder extends RecursiveAction{
 //        BASE_URL = url;
 //    }
 
+    public PageFinder(String url, String baseUrl, Queue<String> visitedUrls, SitePage siteDomain, Connection connection,
+                      SiteRepository siteRepository, PageRepository pageRepository, LemmaService lemmaService,
+                      PageIndexerService pageIndexerService, AtomicBoolean indexingProcessing) {
+        BASE_URL = baseUrl;
+        this.url = url;
+        this.visitedUrls = visitedUrls;
+        this.siteDomain = siteDomain;
+
+        this.connection = connection;
+        this.siteRepository = siteRepository;
+        this.pageRepository = pageRepository;
+        this.lemmaService = lemmaService;
+        this.pageIndexerService = pageIndexerService;
+        this.indexingProcessing = indexingProcessing;
+    }
+
     public PageFinder(String url, Queue<String> visitedUrls, SitePage siteDomain, Connection connection,
                       SiteRepository siteRepository, PageRepository pageRepository, LemmaService lemmaService,
                       PageIndexerService pageIndexerService, AtomicBoolean indexingProcessing) {
-        BASE_URL = url;
+
         this.url = url;
         this.visitedUrls = visitedUrls;
         this.siteDomain = siteDomain;
@@ -96,11 +113,11 @@ public class PageFinder extends RecursiveAction{
             }
             indexingPage.setCode(doc.connection().response().statusCode());
 
-            SitePage sitePage = siteRepository.findById(siteDomain.getId()).orElseThrow();
+            SitePage sitePage = siteRepository.findByIdWithPages(siteDomain.getId()).orElseThrow();
             sitePage.setStatusTime(Timestamp.valueOf(LocalDateTime.now()));
             siteRepository.save(sitePage);
             pageRepository.save(indexingPage);
-            //pageIndexerService.indexHtml(indexingPage.getContent(), indexingPage); // еще не реализован
+            pageIndexerService.indexHtml(indexingPage.getContent(), indexingPage);
 
             Elements links = doc.select("a[href]");
             for (Element link : links) {
@@ -125,9 +142,13 @@ public class PageFinder extends RecursiveAction{
 
         }
         catch (Exception ex) {
-            errorHandling(ex, indexingPage);
-            SitePage sitePage = siteRepository.findById(siteDomain.getId()).orElseThrow();
+            String error = ex.toString();
+            errorHandling(error, indexingPage);
+            SitePage sitePage = siteRepository.findByIdWithPages(siteDomain.getId()).orElseThrow();
             sitePage.setStatusTime(Timestamp.valueOf(LocalDateTime.now()));
+            sitePage.setStatus(Status.FAILED);
+            sitePage.setLastError(error);
+
             siteRepository.save(sitePage);
             pageRepository.save(indexingPage);
             log.debug("ERROR INDEXATION, siteId:" + indexingPage.getSite() + ", path:" + indexingPage.getPath() + ", code:" + indexingPage.getCode() + ", error:" + ex.getMessage());
@@ -141,7 +162,55 @@ public class PageFinder extends RecursiveAction{
                 !FILE_PATTERN.matcher(link).matches();
     }
 
-    void errorHandling(Exception ex, Page indexingPage) {
+    public void refreshPage() {
+
+        Page indexingPage = new Page();
+        indexingPage.setSite(siteDomain);
+        indexingPage.setPath(url);
+
+        try {
+            Document doc = Jsoup.connect(url)
+                    .userAgent(connection.getUserAgent())
+                    .referrer(connection.getReferrer())
+                    .timeout(connection.getTimeout())
+                    .get();
+
+            indexingPage.setContent(doc.html());
+            indexingPage.setCode(doc.connection().response().statusCode());
+
+            if (indexingPage.getContent() == null || indexingPage.getContent().isEmpty() || indexingPage.getContent().isBlank()) {
+                throw new Exception("Content of site id:" + indexingPage.getSite() + ", page:" + indexingPage.getPath() + " is null or empty");
+            }
+
+        } catch (Exception ex) {
+            String error = ex.toString();
+            errorHandling(error, indexingPage);
+            SitePage sitePage = siteRepository.findByIdWithPages(siteDomain.getId()).orElseThrow();
+            sitePage.setStatusTime(Timestamp.valueOf(LocalDateTime.now()));
+            sitePage.setStatus(Status.FAILED);
+            sitePage.setLastError(error);
+            siteRepository.save(sitePage);
+            pageRepository.save(indexingPage);
+
+            return;
+        }
+        SitePage sitePage = siteRepository.findByIdWithPages(siteDomain.getId()).orElseThrow();
+        sitePage.setStatusTime(Timestamp.valueOf(LocalDateTime.now()));
+        siteRepository.save(sitePage);
+
+        Page pageToRefresh = pageRepository.findPageBySiteIdAndPath(url, sitePage.getId());
+        if (pageToRefresh != null) {
+            pageToRefresh.setCode(indexingPage.getCode());
+            pageToRefresh.setContent(indexingPage.getContent());
+            pageRepository.save(pageToRefresh);
+            //pageIndexerService.refreshIndex(indexingPage.getContent(), pageToRefresh);
+        } else {
+            pageRepository.save(indexingPage);
+            //pageIndexerService.refreshIndex(indexingPage.getContent(), indexingPage);
+        }
+    }
+
+    void errorHandling(String ex, Page indexingPage) {
         String message = ex.toString();
         int errorCode;
         if (message.contains("UnsupportedMimeTypeException")) {
