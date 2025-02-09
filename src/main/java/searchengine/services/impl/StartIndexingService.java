@@ -34,13 +34,13 @@ public class StartIndexingService implements IndexingService {
 
     private final LemmaRepository lemmaRepository;
 
-    private final SitesList sitesToIndexing;
+    //private final SitesList sitesToIndexing;
 
-    private final Set<SitePage> sitePagesAllFromDB;
+    //private final Set<SitePage> sitePagesAllFromDB;
 
     private final PageIndexerService pageIndexerService;
 
-    private final LemmaService lemmaService;
+//    private final LemmaService lemmaService;
     private AtomicBoolean indexingProcessing;
 
     private final Connection connection; //Инжекция Connection
@@ -96,13 +96,14 @@ public class StartIndexingService implements IndexingService {
 
         List<Thread> indexingThreadList = new ArrayList<>();
 
+
         for (SitePage siteUrl : sitePagesAllFromDB) {
             String urlSite = siteUrl.getUrl();
             //Runnable indexSite = () -> {
                 //ConcurrentHashMap<String, Page> resultForkJoinPageIndexer = new ConcurrentHashMap<>();
                 try {
                     log.info("Запущена индексация " + urlSite);
-                    PageFinder pageFinder = new PageFinder(urlSite, urlSite, new ConcurrentLinkedQueue<>(), siteUrl,
+                    PageFinder pageFinder = new PageFinder(urlSite, new ConcurrentLinkedQueue<>(), siteUrl,
                             connection, siteRepository, pageRepository,
                             lemmaService, pageIndexerService, indexingProcessing);
                     pageFinder.compute();
@@ -113,7 +114,7 @@ public class StartIndexingService implements IndexingService {
 
 
                 } catch (SecurityException ex) {
-                    SitePage sitePage = siteRepository.findByIdWithPages(siteUrl.getId()).orElseThrow();
+                    SitePage sitePage = siteRepository.getSiteByUrl(siteUrl.getUrl());
                     sitePage.setStatus(Status.FAILED);
                     sitePage.setLastError(ex.getMessage());
                     siteRepository.save(sitePage);
@@ -121,13 +122,13 @@ public class StartIndexingService implements IndexingService {
 
                 if (!indexingProcessing.get()) {
                     log.warn("Indexing stopped by user, site:" + urlSite);
-                    SitePage sitePage = siteRepository.findByIdWithPages(siteUrl.getId()).orElseThrow();
+                    SitePage sitePage = siteRepository.getSiteByUrl(siteUrl.getUrl());
                     sitePage.setStatus(Status.FAILED);
                     sitePage.setLastError("Indexing stopped by user");
                     siteRepository.save(sitePage);
                 } else {
                     log.info("Indexed site: " + urlSite);
-                    SitePage sitePage = siteRepository.findByIdWithPages(siteUrl.getId()).orElseThrow();
+                    SitePage sitePage = siteRepository.getSiteByUrl(siteUrl.getUrl());
                     sitePage.setStatus(Status.INDEXED);
                     siteRepository.save(sitePage);
                 }
@@ -159,14 +160,14 @@ public class StartIndexingService implements IndexingService {
                     lemmaService, pageIndexerService, indexingProcessing);
             pageFinder.refreshPage();
         } catch (SecurityException ex) {
-            SitePage sitePage = siteRepository.findByIdWithPages(site.getId()).orElseThrow();
+            SitePage sitePage = siteRepository.getSiteByUrl(site.getUrl());
             sitePage.setStatus(Status.FAILED);
             sitePage.setLastError(ex.getMessage());
             siteRepository.save(sitePage);
         }
 
         log.info("Проиндексирован сайт: " + site.getName());
-        SitePage sitePage = siteRepository.findByIdWithPages(site.getId()).orElseThrow();
+        SitePage sitePage = siteRepository.getSiteByUrl(site.getUrl());
         sitePage.setStatus(Status.INDEXED);
         siteRepository.save(sitePage);
     }

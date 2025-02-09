@@ -16,6 +16,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Pattern;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import searchengine.config.Connection;
 import searchengine.entity.Page;
 import searchengine.entity.SitePage;
@@ -42,16 +43,19 @@ public class PageFinder extends RecursiveAction{
     private final PageRepository pageRepository;
     private final AtomicBoolean indexingProcessing;
 
-//    public PageFinder(String url, AtomicBoolean indexingProcessing, Connection connection) {
-//        this(url, new ConcurrentLinkedQueue<>(), new SitePage(),  connection, null, null, null,
-//                null, indexingProcessing);
-//        BASE_URL = url;
+//    public PageFinder(String url, String baseUrl, Queue<String> visitedUrls, SitePage siteDomain,
+//                      Connection connection,
+//                      SiteRepository siteRepository, PageRepository pageRepository, LemmaService lemmaService,
+//                      PageIndexerService pageIndexerService, AtomicBoolean indexingProcessing) {
+//        this(url, visitedUrls, siteDomain, connection, siteRepository, pageRepository, lemmaService, pageIndexerService, indexingProcessing);
+//        BASE_URL = baseUrl;
 //    }
 
-    public PageFinder(String url, String baseUrl, Queue<String> visitedUrls, SitePage siteDomain, Connection connection,
+    public PageFinder(String url, Queue<String> visitedUrls, SitePage siteDomain,
+                      Connection connection,
                       SiteRepository siteRepository, PageRepository pageRepository, LemmaService lemmaService,
                       PageIndexerService pageIndexerService, AtomicBoolean indexingProcessing) {
-        BASE_URL = baseUrl;
+        BASE_URL = siteDomain.getUrl();
         this.url = url;
         this.visitedUrls = visitedUrls;
         this.siteDomain = siteDomain;
@@ -64,21 +68,6 @@ public class PageFinder extends RecursiveAction{
         this.indexingProcessing = indexingProcessing;
     }
 
-    public PageFinder(String url, Queue<String> visitedUrls, SitePage siteDomain, Connection connection,
-                      SiteRepository siteRepository, PageRepository pageRepository, LemmaService lemmaService,
-                      PageIndexerService pageIndexerService, AtomicBoolean indexingProcessing) {
-
-        this.url = url;
-        this.visitedUrls = visitedUrls;
-        this.siteDomain = siteDomain;
-
-        this.connection = connection;
-        this.siteRepository = siteRepository;
-        this.pageRepository = pageRepository;
-        this.lemmaService = lemmaService;
-        this.pageIndexerService = pageIndexerService;
-        this.indexingProcessing = indexingProcessing;
-    }
 
     @Override
     protected void compute() {
@@ -113,7 +102,7 @@ public class PageFinder extends RecursiveAction{
             }
             indexingPage.setCode(doc.connection().response().statusCode());
 
-            SitePage sitePage = siteRepository.findByIdWithPages(siteDomain.getId()).orElseThrow();
+            SitePage sitePage = siteRepository.getSiteByUrl(siteDomain.getUrl());
             sitePage.setStatusTime(Timestamp.valueOf(LocalDateTime.now()));
             siteRepository.save(sitePage);
             pageRepository.save(indexingPage);
@@ -144,7 +133,7 @@ public class PageFinder extends RecursiveAction{
         catch (Exception ex) {
             String error = ex.toString();
             errorHandling(error, indexingPage);
-            SitePage sitePage = siteRepository.findByIdWithPages(siteDomain.getId()).orElseThrow();
+            SitePage sitePage = siteRepository.getSiteByUrl(siteDomain.getUrl());
             sitePage.setStatusTime(Timestamp.valueOf(LocalDateTime.now()));
             sitePage.setStatus(Status.FAILED);
             sitePage.setLastError(error);
@@ -185,7 +174,7 @@ public class PageFinder extends RecursiveAction{
         } catch (Exception ex) {
             String error = ex.toString();
             errorHandling(error, indexingPage);
-            SitePage sitePage = siteRepository.findByIdWithPages(siteDomain.getId()).orElseThrow();
+            SitePage sitePage = siteRepository.getSiteByUrl(siteDomain.getUrl());
             sitePage.setStatusTime(Timestamp.valueOf(LocalDateTime.now()));
             sitePage.setStatus(Status.FAILED);
             sitePage.setLastError(error);
@@ -194,7 +183,7 @@ public class PageFinder extends RecursiveAction{
 
             return;
         }
-        SitePage sitePage = siteRepository.findByIdWithPages(siteDomain.getId()).orElseThrow();
+        SitePage sitePage = siteRepository.getSiteByUrl(siteDomain.getUrl());
         sitePage.setStatusTime(Timestamp.valueOf(LocalDateTime.now()));
         siteRepository.save(sitePage);
 
