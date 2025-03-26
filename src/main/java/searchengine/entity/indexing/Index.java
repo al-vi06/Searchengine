@@ -2,14 +2,17 @@ package searchengine.entity.indexing;
 
 import com.sun.istack.NotNull;
 import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 import org.hibernate.annotations.OnDelete;
 import org.hibernate.annotations.OnDeleteAction;
 import searchengine.entity.Page;
 import javax.persistence.*;
 
-@Data
 @Entity
 @Table(name = "`index`")
+@Setter
+@Getter
 public class Index {
 
     @Id

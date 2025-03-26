@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 import searchengine.config.Connection;
 import searchengine.config.Site;
 import searchengine.config.SitesList;
+import searchengine.dto.statistics.BeanContainer;
 import searchengine.entity.SitePage;
 import searchengine.entity.Status;
 import searchengine.reposytories.LemmaRepository;
@@ -20,6 +21,7 @@ import searchengine.services.PageIndexerService;
 import java.net.URL;
 import java.util.*;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 @Service
@@ -34,16 +36,16 @@ public class StartIndexingService implements IndexingService {
 
     private final LemmaRepository lemmaRepository;
 
-    //private final SitesList sitesToIndexing;
+    private final SitesList sitesToIndexing;
 
-    //private final Set<SitePage> sitePagesAllFromDB;
+    private final Set<SitePage> sitePagesAllFromDB;
 
     private final PageIndexerService pageIndexerService;
 
-//    private final LemmaService lemmaService;
+    private final LemmaService lemmaService;
     private AtomicBoolean indexingProcessing;
 
-    private final Connection connection; //Инжекция Connection
+    private final Connection connection;
 
     @Override
     @Async
@@ -96,21 +98,28 @@ public class StartIndexingService implements IndexingService {
 
         List<Thread> indexingThreadList = new ArrayList<>();
 
+        //инициализируем bean container
+        BeanContainer beanContainer = new BeanContainer(connection, siteRepository, pageRepository,
+                lemmaService, pageIndexerService, indexingProcessing);
 
         for (SitePage siteUrl : sitePagesAllFromDB) {
             String urlSite = siteUrl.getUrl();
-            //Runnable indexSite = () -> {
+            Runnable indexSite = () -> {
                 //ConcurrentHashMap<String, Page> resultForkJoinPageIndexer = new ConcurrentHashMap<>();
                 try {
                     log.info("Запущена индексация " + urlSite);
-                    PageFinder pageFinder = new PageFinder(urlSite, new ConcurrentLinkedQueue<>(), siteUrl,
-                            connection, siteRepository, pageRepository,
-                            lemmaService, pageIndexerService, indexingProcessing);
-                    pageFinder.compute();
-                    //ForkJoinPool pool = new ForkJoinPool();
-//                    pool.invoke(new PageFinder(urlSite, new ConcurrentLinkedQueue<>(), siteUrl,
+//                    PageFinder pageFinder = new PageFinder(urlSite, new ConcurrentLinkedQueue<>(), siteUrl,
 //                            connection, siteRepository, pageRepository,
-//                            lemmaService, pageIndexerService, indexingProcessing));
+//                            lemmaService, pageIndexerService, indexingProcessing);
+                    beanContainer.setUrl(urlSite);
+                    beanContainer.setVisitedUrls(new ConcurrentLinkedQueue<>());
+                    beanContainer.setSiteDomain(siteUrl);
+
+                    //для немногопоточки
+//                  PageFinder pageFinder = new PageFinder(beanContainer);
+//                  pageFinder.compute();
+                    ForkJoinPool pool = new ForkJoinPool();
+                    pool.invoke(new PageFinder(beanContainer));
 
 
                 } catch (SecurityException ex) {
@@ -133,16 +142,16 @@ public class StartIndexingService implements IndexingService {
                     siteRepository.save(sitePage);
                 }
 
-            //};
+            };
 
-//            Thread thread = new Thread(indexSite);
-//            indexingThreadList.add(thread);
-//            thread.start();
+            Thread thread = new Thread(indexSite);
+            indexingThreadList.add(thread);
+            thread.start();
         }
 
-//        for (Thread thread : indexingThreadList) {
-//            thread.join();
-//        }
+        for (Thread thread : indexingThreadList) {
+            thread.join();
+        }
 
         indexingProcessing.set(false);
 
@@ -155,9 +164,15 @@ public class StartIndexingService implements IndexingService {
         //ConcurrentHashMap<String, Page> resultForkJoinPageIndexer = new ConcurrentHashMap<>();
         try {
             log.info("Запущена переиндексация страницы:" + url.toString());
-            PageFinder pageFinder = new PageFinder(url.toString(), new ConcurrentLinkedQueue<>(), existSitePate,
-                    connection, siteRepository, pageRepository,
+            BeanContainer beanContainer = new BeanContainer(connection, siteRepository, pageRepository,
                     lemmaService, pageIndexerService, indexingProcessing);
+            beanContainer.setUrl(url.toString());
+            beanContainer.setVisitedUrls(new ConcurrentLinkedQueue<>());
+            beanContainer.setSiteDomain(existSitePate);
+//            PageFinder pageFinder = new PageFinder(url.toString(), new ConcurrentLinkedQueue<>(), existSitePate,
+//                    connection, siteRepository, pageRepository,
+//                    lemmaService, pageIndexerService, indexingProcessing);
+            PageFinder pageFinder = new PageFinder(beanContainer);
             pageFinder.refreshPage();
         } catch (SecurityException ex) {
             SitePage sitePage = siteRepository.getSiteByUrl(site.getUrl());

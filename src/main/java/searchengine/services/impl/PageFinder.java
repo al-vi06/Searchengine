@@ -11,6 +11,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.RecursiveAction;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Pattern;
@@ -18,6 +19,7 @@ import java.util.regex.Pattern;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import searchengine.config.Connection;
+import searchengine.dto.statistics.BeanContainer;
 import searchengine.entity.Page;
 import searchengine.entity.SitePage;
 import searchengine.entity.Status;
@@ -28,21 +30,23 @@ import searchengine.services.PageIndexerService;
 
 @Slf4j
 public class PageFinder extends RecursiveAction{
-    private final String url;
-    private final Queue<String> visitedUrls;
+    //private final String url;
+    //private final Queue<String> visitedUrls;
     private static String BASE_URL;
     private static final int SLEEP_TIME = 100;
     private static final Pattern FILE_PATTERN = Pattern.compile(".*\\.(jpg|jpeg|png|gif|bmp|pdf|doc|docx|xls|xlsx|ppt|pptx|zip|rar|tar|gz|7z|mp3|wav|mp4|mkv|avi|mov|sql)$", Pattern.CASE_INSENSITIVE);
 
     //переменные для работы с сервисом и репозиторием
-    private final SitePage siteDomain;
-    private final Connection connection;
-    private final PageIndexerService pageIndexerService;
-    private final LemmaService lemmaService;
-    private final SiteRepository siteRepository;
-    private final PageRepository pageRepository;
-    private final AtomicBoolean indexingProcessing;
+    private final BeanContainer beanContainer;
+//    private final SitePage siteDomain;
+//    private final Connection connection;
+//    private final PageIndexerService pageIndexerService;
+//    private final LemmaService lemmaService;
+//    private final SiteRepository siteRepository;
+//    private final PageRepository pageRepository;
+//    private final AtomicBoolean indexingProcessing;
 
+    //удалить этот конструктор
 //    public PageFinder(String url, String baseUrl, Queue<String> visitedUrls, SitePage siteDomain,
 //                      Connection connection,
 //                      SiteRepository siteRepository, PageRepository pageRepository, LemmaService lemmaService,
@@ -51,57 +55,77 @@ public class PageFinder extends RecursiveAction{
 //        BASE_URL = baseUrl;
 //    }
 
-    public PageFinder(String url, Queue<String> visitedUrls, SitePage siteDomain,
-                      Connection connection,
-                      SiteRepository siteRepository, PageRepository pageRepository, LemmaService lemmaService,
-                      PageIndexerService pageIndexerService, AtomicBoolean indexingProcessing) {
-        BASE_URL = siteDomain.getUrl();
-        this.url = url;
-        this.visitedUrls = visitedUrls;
-        this.siteDomain = siteDomain;
+    //такой констр был ранее до бина
+//    public PageFinder(String url, Queue<String> visitedUrls, SitePage siteDomain,
+//                      Connection connection,
+//                      SiteRepository siteRepository, PageRepository pageRepository, LemmaService lemmaService,
+//                      PageIndexerService pageIndexerService, AtomicBoolean indexingProcessing) {
 
-        this.connection = connection;
-        this.siteRepository = siteRepository;
-        this.pageRepository = pageRepository;
-        this.lemmaService = lemmaService;
-        this.pageIndexerService = pageIndexerService;
-        this.indexingProcessing = indexingProcessing;
+//        BASE_URL = siteDomain.getUrl();
+//        this.url = url;
+//        this.visitedUrls = visitedUrls;
+//        this.siteDomain = siteDomain;
+//
+//        this.connection = connection;
+//        this.siteRepository = siteRepository;
+//        this.pageRepository = pageRepository;
+//        this.lemmaService = lemmaService;
+//        this.pageIndexerService = pageIndexerService;
+//        this.indexingProcessing = indexingProcessing;
+//    }
+
+    public PageFinder(BeanContainer beanContainer) {
+        BASE_URL = beanContainer.getSiteDomain().getUrl();
+        this.beanContainer = beanContainer;
     }
 
 
     @Override
     protected void compute() {
-        if (!indexingProcessing.get()) {
+        if (!beanContainer.getIndexingProcessing().get()) {
             return;
         }
 
         Page indexingPage = new Page();
+        SitePage siteDomain = beanContainer.getSiteDomain();
         indexingPage.setSite(siteDomain);
+        String url = beanContainer.getUrl();
         indexingPage.setPath(url);
 
         System.out.println("Processing URL: " + url);
 
+        Queue<String> visitedUrls = beanContainer.getVisitedUrls();
         synchronized (visitedUrls) {
             if (visitedUrls.contains(url)) {
                 return;
             }
             visitedUrls.add(url);
         }
+        beanContainer.setVisitedUrls(visitedUrls);
 
         List<PageFinder> tasks = new ArrayList<>();
+
+        SiteRepository siteRepository = beanContainer.getSiteRepository();
+        Connection connection = beanContainer.getConnection();
+        PageRepository pageRepository = beanContainer.getPageRepository();
+        PageIndexerService pageIndexerService = beanContainer.getPageIndexerService();
+
         try {
             Document doc = Jsoup.connect(url)
-                    .userAgent(connection.getUserAgent())
-                    .referrer(connection.getReferrer())
-                    .timeout(connection.getTimeout())
+                    .userAgent(connection.userAgent())
+                    .referrer(connection.referrer())
+                    .timeout(connection.timeout())
                     .get();
 
-            indexingPage.setContent(doc.html());
+            String html = doc.html();
+            if (html != null) {
+                indexingPage.setContent(html);
+            }
+
             if (indexingPage.getContent() == null || indexingPage.getContent().isEmpty() || indexingPage.getContent().isBlank()) {
                 throw new Exception("Content of site id:" + indexingPage.getSite() + ", page:" + indexingPage.getPath() + " is null or empty");
             }
             indexingPage.setCode(doc.connection().response().statusCode());
-
             SitePage sitePage = siteRepository.getSiteByUrl(siteDomain.getUrl());
             sitePage.setStatusTime(Timestamp.valueOf(LocalDateTime.now()));
             siteRepository.save(sitePage);
@@ -112,21 +136,26 @@ public class PageFinder extends RecursiveAction{
             for (Element link : links) {
                 String href = link.attr("abs:href");
                 if (isValidLink(href.trim())) {
-                    PageFinder task = new PageFinder(href, visitedUrls, siteDomain, connection,
-                            siteRepository, pageRepository, lemmaService,
-                            pageIndexerService, indexingProcessing);
+//                    PageFinder task = new PageFinder(href, visitedUrls, siteDomain, connection,
+//                            siteRepository, pageRepository, lemmaService,
+//                            pageIndexerService, indexingProcessing);
+                    beanContainer.setUrl(href);
+                    PageFinder task = new PageFinder(beanContainer);
                     task.compute();
-                    //task.fork();
+
+                    //для многопоточки!
+                    task.fork();
+
                     tasks.add(task);
                     Thread.sleep(SLEEP_TIME);
                 }
             }
 
             for (PageFinder task : tasks) {
-                if (!indexingProcessing.get()) {
+                if (!beanContainer.getIndexingProcessing().get()) {
                     return;
                 }
-                //task.join();
+                task.join();
             }
 
         }
@@ -141,27 +170,31 @@ public class PageFinder extends RecursiveAction{
             siteRepository.save(sitePage);
             pageRepository.save(indexingPage);
             log.debug("ERROR INDEXATION, siteId:" + indexingPage.getSite() + ", path:" + indexingPage.getPath() + ", code:" + indexingPage.getCode() + ", error:" + ex.getMessage());
-            return;
         }
 
     }
 
     private boolean isValidLink(String link) {
-        return link.startsWith(BASE_URL) && !link.contains("#") && !visitedUrls.contains(link) &&
+        return link.startsWith(BASE_URL) && !link.contains("#") && !beanContainer.getVisitedUrls().contains(link) &&
                 !FILE_PATTERN.matcher(link).matches();
     }
 
     public void refreshPage() {
 
         Page indexingPage = new Page();
+        SitePage siteDomain = beanContainer.getSiteDomain();
         indexingPage.setSite(siteDomain);
+        String url = beanContainer.getUrl();
         indexingPage.setPath(url);
 
+        SiteRepository siteRepository = beanContainer.getSiteRepository();
+        Connection connection = beanContainer.getConnection();
+        PageRepository pageRepository = beanContainer.getPageRepository();
         try {
             Document doc = Jsoup.connect(url)
-                    .userAgent(connection.getUserAgent())
-                    .referrer(connection.getReferrer())
-                    .timeout(connection.getTimeout())
+                    .userAgent(connection.userAgent())
+                    .referrer(connection.referrer())
+                    .timeout(connection.timeout())
                     .get();
 
             indexingPage.setContent(doc.html());

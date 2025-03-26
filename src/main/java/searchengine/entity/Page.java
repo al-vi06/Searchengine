@@ -1,7 +1,9 @@
 package searchengine.entity;
 
 import lombok.Data;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 import searchengine.entity.indexing.Index;
 import searchengine.entity.indexing.Lemma;
 
@@ -9,9 +11,10 @@ import javax.persistence.*;
 import java.util.ArrayList;
 import java.util.List;
 
-@Data
 @Entity
 @NoArgsConstructor
+@Setter
+@Getter
 public class Page {
 
     @Id

@@ -1,7 +1,9 @@
 package searchengine.entity.indexing;
 
 import lombok.Data;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 import org.hibernate.annotations.OnDelete;
 import org.hibernate.annotations.OnDeleteAction;
 import searchengine.entity.SitePage;
@@ -10,9 +12,10 @@ import javax.persistence.*;
 import java.util.ArrayList;
 import java.util.List;
 
-@Data
 @Entity
 @NoArgsConstructor
+@Setter
+@Getter
 public class Lemma {
 
     @Id

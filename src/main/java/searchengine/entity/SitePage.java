@@ -1,7 +1,9 @@
 package searchengine.entity;
 
 import lombok.Data;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 import searchengine.entity.indexing.Lemma;
 
 import java.util.ArrayList;
@@ -9,10 +11,12 @@ import java.util.Date;
 import java.util.List;
 import javax.persistence.*;
 
-@Data
+
 @Entity
 @NoArgsConstructor
 @Table(name = "site")
+@Setter
+@Getter
 public class SitePage {
 
     @Id
