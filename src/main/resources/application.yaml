@@ -27,8 +27,8 @@ connection-settings:
 
 indexing-settings:
   sites:
-    #- url: https://sendel.ru/
-    #name: sendel
+    - url: https://sendel.ru/
+      name: sendel
     - url: https://nikoartgallery.com/
       name: nikoartgallery
       #- url: https://www.lenta.ru

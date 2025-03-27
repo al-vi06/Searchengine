@@ -11,12 +11,13 @@ import searchengine.services.LemmaService;
 import searchengine.services.PageIndexerService;
 
 import java.util.Queue;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 @Data
 public class BeanContainer {
     private String url;
-    private Queue<String> visitedUrls;
+    private ConcurrentHashMap<String, Boolean> visitedUrls;
     private SitePage siteDomain;
     private final Connection connection;
     private final SiteRepository siteRepository;
