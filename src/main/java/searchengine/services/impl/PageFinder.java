@@ -152,7 +152,7 @@ public class PageFinder extends RecursiveAction{
             sitePage.setStatusTime(Timestamp.valueOf(LocalDateTime.now()));
             sitePage.setStatus(Status.FAILED);
             sitePage.setLastError(error);
-
+//
             siteRepository.save(sitePage);
             pageRepository.save(indexingPage);
             log.debug("ERROR INDEXATION, siteId:" + indexingPage.getSite() + ", path:" + indexingPage.getPath() + ", code:" + indexingPage.getCode() + ", error:" + ex.getMessage());

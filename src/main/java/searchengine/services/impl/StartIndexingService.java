@@ -136,7 +136,7 @@ public class StartIndexingService implements IndexingService {
                 }
 
             };
-
+//
             Thread thread = new Thread(indexSite);
             indexingThreadList.add(thread);
             thread.start();
