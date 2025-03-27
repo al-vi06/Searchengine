@@ -114,17 +114,18 @@ public class PageFinder extends RecursiveAction{
             pageRepository.save(indexingPage);
             pageIndexerService.indexHtml(indexingPage.getContent(), indexingPage);
 
+            //инициализируем bean container
+            BeanContainer newBeanContainer = new BeanContainer(
+                    connection, siteRepository, pageRepository,
+                    beanContainer.getLemmaService(), pageIndexerService,
+                    beanContainer.getIndexingProcessing()
+            );
+
             Elements links = doc.select("a[href]");
             for (Element link : links) {
                 String href = link.attr("abs:href");
                 if (isValidLink(href.trim())) {
                     //beanContainer.setUrl(href);
-                    //инициализируем bean container
-                    BeanContainer newBeanContainer = new BeanContainer(
-                            connection, siteRepository, pageRepository,
-                            beanContainer.getLemmaService(), pageIndexerService,
-                            beanContainer.getIndexingProcessing()
-                    );
                     newBeanContainer.setUrl(href);
                     newBeanContainer.setVisitedUrls(visitedUrls);
                     newBeanContainer.setSiteDomain(siteDomain);

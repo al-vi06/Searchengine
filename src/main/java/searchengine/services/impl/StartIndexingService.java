@@ -98,12 +98,12 @@ public class StartIndexingService implements IndexingService {
 
         List<Thread> indexingThreadList = new ArrayList<>();
 
+
         for (SitePage siteUrl : sitePagesAllFromDB) {
             String urlSite = siteUrl.getUrl();
             Runnable indexSite = () -> {
                 try {
                     log.info("Запущена индексация " + urlSite);
-
                     //инициализируем bean container
                     BeanContainer beanContainer = new BeanContainer(connection, siteRepository, pageRepository,
                             lemmaService, pageIndexerService, indexingProcessing);
