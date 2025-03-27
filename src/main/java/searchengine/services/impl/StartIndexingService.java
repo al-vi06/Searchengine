@@ -98,26 +98,19 @@ public class StartIndexingService implements IndexingService {
 
         List<Thread> indexingThreadList = new ArrayList<>();
 
-        //инициализируем bean container
-        BeanContainer beanContainer = new BeanContainer(connection, siteRepository, pageRepository,
-                lemmaService, pageIndexerService, indexingProcessing);
-
         for (SitePage siteUrl : sitePagesAllFromDB) {
             String urlSite = siteUrl.getUrl();
             Runnable indexSite = () -> {
-                //ConcurrentHashMap<String, Page> resultForkJoinPageIndexer = new ConcurrentHashMap<>();
                 try {
                     log.info("Запущена индексация " + urlSite);
-//                    PageFinder pageFinder = new PageFinder(urlSite, new ConcurrentLinkedQueue<>(), siteUrl,
-//                            connection, siteRepository, pageRepository,
-//                            lemmaService, pageIndexerService, indexingProcessing);
+
+                    //инициализируем bean container
+                    BeanContainer beanContainer = new BeanContainer(connection, siteRepository, pageRepository,
+                            lemmaService, pageIndexerService, indexingProcessing);
                     beanContainer.setUrl(urlSite);
                     beanContainer.setVisitedUrls(new ConcurrentLinkedQueue<>());
                     beanContainer.setSiteDomain(siteUrl);
 
-                    //для немногопоточки
-//                  PageFinder pageFinder = new PageFinder(beanContainer);
-//                  pageFinder.compute();
                     ForkJoinPool pool = new ForkJoinPool();
                     pool.invoke(new PageFinder(beanContainer));
 

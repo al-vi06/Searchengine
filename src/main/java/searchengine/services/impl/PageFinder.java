@@ -30,33 +30,15 @@ import searchengine.services.PageIndexerService;
 
 @Slf4j
 public class PageFinder extends RecursiveAction{
-    //private final String url;
-    //private final Queue<String> visitedUrls;
     private static String BASE_URL;
     private static final int SLEEP_TIME = 100;
     private static final Pattern FILE_PATTERN = Pattern.compile(".*\\.(jpg|jpeg|png|gif|bmp|pdf|doc|docx|xls|xlsx|ppt|pptx|zip|rar|tar|gz|7z|mp3|wav|mp4|mkv|avi|mov|sql)$", Pattern.CASE_INSENSITIVE);
 
     //переменные для работы с сервисом и репозиторием
     private final BeanContainer beanContainer;
-//    private final SitePage siteDomain;
-//    private final Connection connection;
-//    private final PageIndexerService pageIndexerService;
-//    private final LemmaService lemmaService;
-//    private final SiteRepository siteRepository;
-//    private final PageRepository pageRepository;
-//    private final AtomicBoolean indexingProcessing;
-
-    //удалить этот конструктор
-//    public PageFinder(String url, String baseUrl, Queue<String> visitedUrls, SitePage siteDomain,
-//                      Connection connection,
-//                      SiteRepository siteRepository, PageRepository pageRepository, LemmaService lemmaService,
-//                      PageIndexerService pageIndexerService, AtomicBoolean indexingProcessing) {
-//        this(url, visitedUrls, siteDomain, connection, siteRepository, pageRepository, lemmaService, pageIndexerService, indexingProcessing);
-//        BASE_URL = baseUrl;
-//    }
 
     //такой констр был ранее до бина
-//    public PageFinder(String url, Queue<String> visitedUrls, SitePage siteDomain,
+    //public PageFinder(String url, Queue<String> visitedUrls, SitePage siteDomain,
 //                      Connection connection,
 //                      SiteRepository siteRepository, PageRepository pageRepository, LemmaService lemmaService,
 //                      PageIndexerService pageIndexerService, AtomicBoolean indexingProcessing) {
@@ -136,16 +118,20 @@ public class PageFinder extends RecursiveAction{
             for (Element link : links) {
                 String href = link.attr("abs:href");
                 if (isValidLink(href.trim())) {
-//                    PageFinder task = new PageFinder(href, visitedUrls, siteDomain, connection,
-//                            siteRepository, pageRepository, lemmaService,
-//                            pageIndexerService, indexingProcessing);
-                    beanContainer.setUrl(href);
-                    PageFinder task = new PageFinder(beanContainer);
-                    task.compute();
-
+                    //beanContainer.setUrl(href);
+                    //инициализируем bean container
+                    BeanContainer newBeanContainer = new BeanContainer(
+                            connection, siteRepository, pageRepository,
+                            beanContainer.getLemmaService(), pageIndexerService,
+                            beanContainer.getIndexingProcessing()
+                    );
+                    newBeanContainer.setUrl(href);
+                    newBeanContainer.setVisitedUrls(visitedUrls);
+                    newBeanContainer.setSiteDomain(siteDomain);
+                    PageFinder task = new PageFinder(newBeanContainer);
+                    //task.compute();
                     //для многопоточки!
                     task.fork();
-
                     tasks.add(task);
                     Thread.sleep(SLEEP_TIME);
                 }
