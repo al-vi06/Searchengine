@@ -7,7 +7,7 @@ import org.springframework.stereotype.Service;
 import searchengine.config.Connection;
 import searchengine.config.Site;
 import searchengine.config.SitesList;
-import searchengine.dto.statistics.BeanContainer;
+import searchengine.dto.BeanContainer;
 import searchengine.entity.SitePage;
 import searchengine.entity.Status;
 import searchengine.reposytories.LemmaRepository;
@@ -98,7 +98,6 @@ public class StartIndexingService implements IndexingService {
 
         List<Thread> indexingThreadList = new ArrayList<>();
 
-
         for (SitePage siteUrl : sitePagesAllFromDB) {
             String urlSite = siteUrl.getUrl();
             Runnable indexSite = () -> {
@@ -136,7 +135,7 @@ public class StartIndexingService implements IndexingService {
                 }
 
             };
-//
+
             Thread thread = new Thread(indexSite);
             indexingThreadList.add(thread);
             thread.start();

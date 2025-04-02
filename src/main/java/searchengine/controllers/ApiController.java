@@ -1,13 +1,10 @@
 package searchengine.controllers;
 
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import searchengine.config.SitesList;
 import searchengine.dto.statistics.StatisticsResponse;
-import searchengine.dto.statistics.responses.NotOkResponse;
-import searchengine.dto.statistics.responses.OkResponse;
 import searchengine.entity.SitePage;
 
 import searchengine.services.IndexingService;
@@ -17,6 +14,8 @@ import searchengine.services.StatisticsService;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -49,10 +48,10 @@ public class ApiController {
             ));
         }
 
-        //executor.submit(() -> {
+        executor.submit(() -> {
             indexingProcessing.set(true);
             indexingService.startIndexing(indexingProcessing);
-        //});
+        });
 
         return ResponseEntity.ok(Map.of("result", true));
     }
@@ -71,7 +70,8 @@ public class ApiController {
 
     @PostMapping("/indexPage")
     public ResponseEntity<?> indexPage(@RequestBody String url) throws IOException {
-        URL refUrl = new URL(url);
+        String decodedUrl = URLDecoder.decode(url, StandardCharsets.UTF_8);
+        URL refUrl = new URL(decodedUrl.substring(4));
         SitePage sitePage = new SitePage();
         try {
             sitesList.getSites().stream().filter(site -> refUrl.getHost().equals(site.getUrl().getHost())).findFirst().map(site -> {

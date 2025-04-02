@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.util.*;
 
 import org.apache.lucene.morphology.LuceneMorphology;
+import org.apache.lucene.morphology.WrongCharaterException;
 import org.apache.lucene.morphology.russian.RussianLuceneMorphology;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -21,18 +22,6 @@ public class LemmaFinder implements LemmaService {
     private static final String WORD_TYPE_REGEX = "\\W\\w&&[^а-яА-Я\\s]";
     private static final String[] particlesNames = new String[]{"МЕЖД", "ПРЕДЛ", "СОЮЗ"};
 
-//    public static LemmaFinder getInstance() throws IOException {
-//        LuceneMorphology morphology= new RussianLuceneMorphology();
-//        return new LemmaFinder(morphology);
-//    }
-//
-//    private LemmaFinder(LuceneMorphology luceneMorphology) {
-//        this.luceneMorphology = luceneMorphology;
-//    }
-
-//    private LemmaFinder(){
-//        throw new RuntimeException("Disallow construct");
-//    }
 
     public LemmaFinder() throws IOException {
         LuceneMorphology morphology= new RussianLuceneMorphology();
@@ -65,12 +54,7 @@ public class LemmaFinder implements LemmaService {
             }
 
             String normalWord = normalForms.get(0);
-
-            if (lemmas.containsKey(normalWord)) {
-                lemmas.put(normalWord, lemmas.get(normalWord) + 1);
-            } else {
-                lemmas.put(normalWord, 1);
-            }
+            lemmas.put(normalWord, lemmas.containsKey(normalWord) ? lemmas.get(normalWord) + 1 : 1);
         }
 
         return lemmas;
@@ -126,30 +110,46 @@ public class LemmaFinder implements LemmaService {
         return true;
     }
 
-    //++ реализовал метод очистки страницы, оставляем только текст
+    //++ реализовал метод очистки тегов на странице, оставляем только текст
     public String cleanHtmlTags(String htmlCode) {
         if (htmlCode == null || htmlCode.isEmpty()) {
             return "";
         }
 
-        Document document = Jsoup.parse(htmlCode);
+        String text = Jsoup.parse(htmlCode).text();
+        return text;
 
-        //Удаляем скрипты, стили и теги <noscript>
-        document.select("script, style, noscript").remove();
-
-        //Удаляем комментарии
-        document.outputSettings().prettyPrint(false); //Чтобы избежать перезаписи текста в комментариях
-        String withoutComments = document.html().replaceAll("<!--.*?-->", "");
-
-        //Убираем HTML-теги, оставляем только текст
-        Document cleanedDocument = Jsoup.parse(withoutComments);
-        String textOnly = cleanedDocument.text();
-
-        //только русские и английские символы, а также пробелы
-        String cleanedText = textOnly.replaceAll("[^а-яА-Яa-zA-Z\\s]", "");
-
-        //Убираем лишние пробелы
-        return cleanedText.trim().replaceAll("\\s{2,}", " ");
+//        //Удаляем скрипты, стили и теги <noscript>
+//        document.select("script, style, noscript").remove();
+//
+//        //Удаляем комментарии
+//        document.outputSettings().prettyPrint(false); //Чтобы избежать перезаписи текста в комментариях
+//        String withoutComments = document.html().replaceAll("<!--.*?-->", "");
+//
+//        //Убираем HTML-теги, оставляем только текст
+//        Document cleanedDocument = Jsoup.parse(withoutComments);
+//        String textOnly = cleanedDocument.text();
+//
+//        //только русские и английские символы, а также пробелы
+//        String cleanedText = textOnly.replaceAll("[^а-яА-Яa-zA-Z\\s]", "");
+//
+//        //Убираем лишние пробелы
+//        return cleanedText.trim().replaceAll("\\s{2,}", " ");
     }
-    //--
+
+    @Override
+    public String getLemmaByWord(String word) {
+        String preparedWord = word.toLowerCase();
+        if (hasParticleProperty(preparedWord)) return "";
+        try {
+            List<String> normalWordForms = luceneMorphology.getNormalForms(preparedWord);
+            String wordInfo = luceneMorphology.getMorphInfo(preparedWord).toString();
+            if (hasParticleProperty(wordInfo)) return "";
+            return normalWordForms.get(0);
+        } catch (WrongCharaterException ex) {
+            log.debug(ex.getMessage());
+        }
+        return "";
+    }
+
 }

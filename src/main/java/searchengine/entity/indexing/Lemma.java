@@ -14,8 +14,7 @@ import java.util.List;
 
 @Entity
 @NoArgsConstructor
-@Setter
-@Getter
+@Setter @Getter
 public class Lemma {
 
     @Id
@@ -25,7 +24,7 @@ public class Lemma {
 
     @ManyToOne
     @OnDelete(action = OnDeleteAction.CASCADE)
-    @JoinColumn(name = "site_id", insertable = false, updatable = false, nullable = false)
+    @JoinColumn(name = "site_id", nullable = false)
     private SitePage site;
 
     @Column(columnDefinition = "VARCHAR(255)", nullable = false)

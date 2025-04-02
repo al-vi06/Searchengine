@@ -11,8 +11,7 @@ import javax.persistence.*;
 
 @Entity
 @Table(name = "`index`")
-@Setter
-@Getter
+@Setter @Getter
 public class Index {
 
     @Id
@@ -22,16 +21,15 @@ public class Index {
 
     @ManyToOne
     @OnDelete(action = OnDeleteAction.CASCADE)
-    @JoinColumn(name = "page_id", insertable = false, updatable = false, nullable = false)
+    @JoinColumn(name = "page_id", nullable = false)
     private Page page;
 
     @ManyToOne
     @OnDelete(action = OnDeleteAction.CASCADE)
-    @JoinColumn(name = "lemma_id", insertable = false, updatable = false, nullable = false)
+    @JoinColumn(name = "lemma_id", nullable = false)
     private Lemma lemma;
 
     @Column(name = "rank", columnDefinition = "FLOAT", nullable = false)//`rank`
     private float rank;
-
 
 }

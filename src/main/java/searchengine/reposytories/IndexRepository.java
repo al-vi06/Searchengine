@@ -11,10 +11,8 @@ import searchengine.entity.indexing.Lemma;
 import java.util.List;
 
 public interface IndexRepository extends JpaRepository<Index, Integer> {
-//    @Transactional
-//    void deleteByLemma(Lemma lemma);
-@Query(value = "select i from Index i where i.id = :pageId and i.id = :lemmaId")
-Index indexSearchExist(@Param("pageId") Integer pageId, @Param("lemmaId") Integer lemmaId);
+    @Query(value = "select i from Index i where i.id = :pageId and i.id = :lemmaId")
+    Index indexSearchExist(@Param("pageId") Integer pageId, @Param("lemmaId") Integer lemmaId);
 
     @Query(value = "select i from Index i where i.id = :lemmaId")
     List<Index> findIndexesByLemma(Integer lemmaId);

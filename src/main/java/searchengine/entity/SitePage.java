@@ -13,10 +13,9 @@ import javax.persistence.*;
 
 
 @Entity
-@NoArgsConstructor
 @Table(name = "site")
-@Setter
-@Getter
+@Setter @Getter
+@NoArgsConstructor
 public class SitePage {
 
     @Id

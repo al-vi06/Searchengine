@@ -1,4 +1,4 @@
-package searchengine.dto.statistics.responses;
+package searchengine.dto.responses;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.AllArgsConstructor;
@@ -14,7 +14,7 @@ public class SearchDataResponse {
     private String uri;
     private String title;
     private String snippet;
-    private Double relevance;
+    private float relevance;
     @JsonIgnore
     private int wordsFound;
 }

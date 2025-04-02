@@ -11,21 +11,16 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Queue;
-import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.RecursiveAction;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Pattern;
 
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import searchengine.config.Connection;
-import searchengine.dto.statistics.BeanContainer;
+import searchengine.dto.BeanContainer;
 import searchengine.entity.Page;
 import searchengine.entity.SitePage;
 import searchengine.entity.Status;
 import searchengine.reposytories.PageRepository;
 import searchengine.reposytories.SiteRepository;
-import searchengine.services.LemmaService;
 import searchengine.services.PageIndexerService;
 
 @Slf4j
@@ -72,7 +67,7 @@ public class PageFinder extends RecursiveAction{
         SitePage siteDomain = beanContainer.getSiteDomain();
         indexingPage.setSite(siteDomain);
         String url = beanContainer.getUrl();
-        indexingPage.setPath(url);
+        indexingPage.setPath(url.substring(BASE_URL.length())); //url
 
         System.out.println("Processing URL: " + url);
 
@@ -130,8 +125,9 @@ public class PageFinder extends RecursiveAction{
                     newBeanContainer.setVisitedUrls(visitedUrls);
                     newBeanContainer.setSiteDomain(siteDomain);
                     PageFinder task = new PageFinder(newBeanContainer);
-                    //task.compute();
+
                     //для многопоточки!
+                    //task.compute();
                     task.fork();
                     tasks.add(task);
                     Thread.sleep(SLEEP_TIME);
@@ -172,11 +168,12 @@ public class PageFinder extends RecursiveAction{
         SitePage siteDomain = beanContainer.getSiteDomain();
         indexingPage.setSite(siteDomain);
         String url = beanContainer.getUrl();
-        indexingPage.setPath(url);
+        indexingPage.setPath(url.substring(BASE_URL.length()));
 
         SiteRepository siteRepository = beanContainer.getSiteRepository();
         Connection connection = beanContainer.getConnection();
         PageRepository pageRepository = beanContainer.getPageRepository();
+        PageIndexerService pageIndexerService = beanContainer.getPageIndexerService();
         try {
             Document doc = Jsoup.connect(url)
                     .userAgent(connection.userAgent())
@@ -200,10 +197,9 @@ public class PageFinder extends RecursiveAction{
             sitePage.setLastError(error);
             siteRepository.save(sitePage);
             pageRepository.save(indexingPage);
-
             return;
         }
-        SitePage sitePage = siteRepository.getSiteByUrl(siteDomain.getUrl());
+        SitePage sitePage = siteRepository.findById(siteDomain.getId()).orElseThrow();
         sitePage.setStatusTime(Timestamp.valueOf(LocalDateTime.now()));
         siteRepository.save(sitePage);
 
@@ -212,10 +208,10 @@ public class PageFinder extends RecursiveAction{
             pageToRefresh.setCode(indexingPage.getCode());
             pageToRefresh.setContent(indexingPage.getContent());
             pageRepository.save(pageToRefresh);
-            //pageIndexerService.refreshIndex(indexingPage.getContent(), pageToRefresh);
+            pageIndexerService.refreshIndex(indexingPage.getContent(), pageToRefresh);
         } else {
             pageRepository.save(indexingPage);
-            //pageIndexerService.refreshIndex(indexingPage.getContent(), indexingPage);
+            pageIndexerService.refreshIndex(indexingPage.getContent(), indexingPage);
         }
     }
 

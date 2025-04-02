@@ -13,8 +13,7 @@ import java.util.List;
 
 @Entity
 @NoArgsConstructor
-@Setter
-@Getter
+@Setter @Getter
 public class Page {
 
     @Id

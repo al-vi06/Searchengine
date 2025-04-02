@@ -7,9 +7,6 @@ import org.springframework.transaction.annotation.Transactional;
 import searchengine.entity.Page;
 
 public interface PageRepository extends JpaRepository<Page, Integer> {
-//    @Transactional
-//    void deleteBySiteUrl(String url);
-
     @Query(value = "select * from page t where t.site_id = :siteId and t.path = :path limit 1", nativeQuery = true)
     Page findPageBySiteIdAndPath(@Param("path") String path, @Param("siteId") Integer siteId);
 
