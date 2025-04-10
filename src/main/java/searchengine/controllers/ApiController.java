@@ -10,6 +10,7 @@ import searchengine.entity.SitePage;
 import searchengine.services.IndexingService;
 import searchengine.services.SearchService;
 import searchengine.services.StatisticsService;
+import searchengine.services.impl.StartIndexingService;
 
 import java.io.IOException;
 import java.net.MalformedURLException;
@@ -28,9 +29,9 @@ public class ApiController {
 
     private final StatisticsService statisticsService;
     private final SitesList sitesList;
-    private final IndexingService indexingService;
+    private final StartIndexingService indexingService;
     private final SearchService searchService;
-    private final AtomicBoolean indexingProcessing = new AtomicBoolean(false);
+    //private final AtomicBoolean indexingProcessing = new AtomicBoolean(false);
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
 
     @GetMapping("/statistics")
@@ -40,8 +41,7 @@ public class ApiController {
 
     @GetMapping("/startIndexing")
     public ResponseEntity<?> startIndexing() {
-        //indexingService.startIndexing();
-        if (indexingProcessing.get()) {
+        if (indexingService.getIndexingProcessing()) {
             return ResponseEntity.badRequest().body(Map.of(
                     "result", false,
                     "error", "Индексация уже запущена"
@@ -49,8 +49,8 @@ public class ApiController {
         }
 
         executor.submit(() -> {
-            indexingProcessing.set(true);
-            indexingService.startIndexing(indexingProcessing);
+            //indexingProcessing.set(true);
+            indexingService.startIndexing();
         });
 
         return ResponseEntity.ok(Map.of("result", true));
@@ -58,13 +58,21 @@ public class ApiController {
 
     @GetMapping("/stopIndexing")
     public ResponseEntity<?> stopIndexing() {
-        if (!indexingProcessing.get()) {
+//        if (!indexingProcessing.get()) {
+//            return ResponseEntity.badRequest().body(Map.of(
+//                    "result", false,
+//                    "error", "Индексация не запущена"
+//            ));
+//        }
+//        indexingProcessing.set(false);
+//        return ResponseEntity.ok(Map.of("result", true));
+
+        if (!indexingService.stopIndexing()) {
             return ResponseEntity.badRequest().body(Map.of(
                     "result", false,
                     "error", "Индексация не запущена"
             ));
         }
-        indexingProcessing.set(false);
         return ResponseEntity.ok(Map.of("result", true));
     }
 

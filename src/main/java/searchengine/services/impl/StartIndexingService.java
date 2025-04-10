@@ -13,7 +13,6 @@ import searchengine.entity.Status;
 import searchengine.reposytories.LemmaRepository;
 import searchengine.reposytories.PageRepository;
 import searchengine.reposytories.SiteRepository;
-import searchengine.services.IndexingService;
 import searchengine.services.LemmaService;
 import searchengine.services.PageIndexerService;
 
@@ -27,7 +26,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class StartIndexingService implements IndexingService {
+public class StartIndexingService {
     private final SitesList sites;
 
     private final SiteRepository siteRepository;
@@ -43,14 +42,16 @@ public class StartIndexingService implements IndexingService {
     private final PageIndexerService pageIndexerService;
 
     private final LemmaService lemmaService;
-    private AtomicBoolean indexingProcessing;
+    private final AtomicBoolean indexingProcessing = new AtomicBoolean(false);
 
     private final Connection connection;
 
-    @Override
+    private ForkJoinPool pool = new ForkJoinPool();
+
+    //@Override
     @Async
-    public void startIndexing(AtomicBoolean indexingProcessing) {
-        this.indexingProcessing = indexingProcessing;
+    public void startIndexing() {
+        indexingProcessing.set(true);
 
         try {
             deleteSitePagesAndPagesInDB();
@@ -60,6 +61,26 @@ public class StartIndexingService implements IndexingService {
             indexingProcessing.set(false);
             log.error("Error: ", ex);
         }
+    }
+
+    public boolean stopIndexing() {
+        try {
+            if (!pool.isShutdown()) {
+                pool.shutdown();
+                indexingProcessing.set(false);
+                log.info("Индексация была остановлена пользователем");
+                return true;
+            }
+        } catch (RuntimeException ex){
+            log.error("Ошибка завершения индексации: ", ex);
+            return false;
+        }
+
+        return false;
+    }
+
+    public boolean getIndexingProcessing(){
+        return indexingProcessing.get();
     }
 
     private void deleteSitePagesAndPagesInDB() {
@@ -100,7 +121,7 @@ public class StartIndexingService implements IndexingService {
 
         for (SitePage siteUrl : sitePagesAllFromDB) {
             String urlSite = siteUrl.getUrl();
-            Runnable indexSite = () -> {
+//            Runnable indexSite = () -> {
                 try {
                     log.info("Запущена индексация " + urlSite);
                     //инициализируем bean container
@@ -110,9 +131,8 @@ public class StartIndexingService implements IndexingService {
                     beanContainer.setVisitedUrls(new ConcurrentLinkedQueue<>());
                     beanContainer.setSiteDomain(siteUrl);
 
-                    ForkJoinPool pool = new ForkJoinPool();
+                    //ForkJoinPool pool = new ForkJoinPool();
                     pool.invoke(new PageFinder(beanContainer));
-
 
                 } catch (SecurityException ex) {
                     SitePage sitePage = siteRepository.getSiteByUrl(siteUrl.getUrl());
@@ -134,22 +154,22 @@ public class StartIndexingService implements IndexingService {
                     siteRepository.save(sitePage);
                 }
 
-            };
+//            };
 
-            Thread thread = new Thread(indexSite);
-            indexingThreadList.add(thread);
-            thread.start();
+//            Thread thread = new Thread(indexSite);
+//            indexingThreadList.add(thread);
+//            thread.start();
         }
 
-        for (Thread thread : indexingThreadList) {
-            thread.join();
-        }
+//        for (Thread thread : indexingThreadList) {
+//            thread.join();
+//        }
 
         indexingProcessing.set(false);
 
     }
 
-    @Override
+    //@Override
     public void refreshPage(SitePage site, URL url) {
         SitePage existSitePate = siteRepository.getSiteByUrl(site.getUrl());
         site.setId(existSitePate.getId());

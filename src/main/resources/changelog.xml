@@ -83,7 +83,7 @@
      </changeSet>
 
      <changeSet id="6" author="Alex">
-         <createIndex indexName="idx_page_path" tableName="page" unique="true">
+         <createIndex indexName="idx_page_path" tableName="page" unique="false">
              <column name="path"/>
          </createIndex>
      </changeSet>
