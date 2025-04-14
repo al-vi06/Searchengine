@@ -48,10 +48,10 @@ public class ApiController {
             ));
         }
 
-        executor.submit(() -> {
+       // executor.submit(() -> {
             //indexingProcessing.set(true);
             indexingService.startIndexing();
-        });
+        //});
 
         return ResponseEntity.ok(Map.of("result", true));
     }

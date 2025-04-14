@@ -11,6 +11,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Queue;
+import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.RecursiveAction;
 import java.util.regex.Pattern;
 
@@ -86,6 +87,7 @@ public class PageFinder extends RecursiveAction{
         Connection connection = beanContainer.getConnection();
         PageRepository pageRepository = beanContainer.getPageRepository();
         PageIndexerService pageIndexerService = beanContainer.getPageIndexerService();
+        ForkJoinPool pool = beanContainer.getPool();
 
         try {
             Document doc = Jsoup.connect(url)
@@ -111,7 +113,7 @@ public class PageFinder extends RecursiveAction{
 
             //инициализируем bean container
             BeanContainer newBeanContainer = new BeanContainer(
-                    connection, siteRepository, pageRepository,
+                    pool, connection, siteRepository, pageRepository,
                     beanContainer.getLemmaService(), pageIndexerService,
                     beanContainer.getIndexingProcessing()
             );
@@ -135,10 +137,11 @@ public class PageFinder extends RecursiveAction{
             }
 
             for (PageFinder task : tasks) {
-                if (!beanContainer.getIndexingProcessing().get()) {
-                    return;
-                }
-                task.join();
+//                if (!beanContainer.getIndexingProcessing().get()) {
+//                    return;
+//                }
+                beanContainer.getPool().invoke(task);
+                //task.join();
             }
 
         }
