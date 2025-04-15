@@ -20,7 +20,7 @@ public class BeanContainer {
     private String url;
     private Queue<String> visitedUrls;
     private SitePage siteDomain;
-    private final ForkJoinPool pool;
+   // private final ForkJoinPool pool;
     private final Connection connection;
     private final SiteRepository siteRepository;
     private final PageRepository pageRepository;
