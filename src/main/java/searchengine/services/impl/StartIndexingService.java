@@ -125,16 +125,14 @@ public class StartIndexingService {
                 try {
                     log.info("Запущена индексация " + urlSite);
                     //инициализируем bean container
-                    BeanContainer beanContainer = new BeanContainer(pool, connection, siteRepository, pageRepository,
+                    BeanContainer beanContainer = new BeanContainer(connection, siteRepository, pageRepository,
                             lemmaService, pageIndexerService, indexingProcessing);
                     beanContainer.setUrl(urlSite);
                     beanContainer.setVisitedUrls(new ConcurrentLinkedQueue<>());
                     beanContainer.setSiteDomain(siteUrl);
 
                     //ForkJoinPool pool = new ForkJoinPool();
-                    //pool.invoke(new PageFinder(beanContainer));
-                    PageFinder pageFinder =  new PageFinder(beanContainer);
-                    pageFinder.compute();
+                    pool.invoke(new PageFinder(beanContainer));
 
                 } catch (SecurityException ex) {
                     SitePage sitePage = siteRepository.getSiteByUrl(siteUrl.getUrl());
@@ -173,32 +171,32 @@ public class StartIndexingService {
 
     //@Override
     public void refreshPage(SitePage site, URL url) {
-//        SitePage existSitePate = siteRepository.getSiteByUrl(site.getUrl());
-//        site.setId(existSitePate.getId());
-//        //ConcurrentHashMap<String, Page> resultForkJoinPageIndexer = new ConcurrentHashMap<>();
-//        try {
-//            log.info("Запущена переиндексация страницы:" + url.toString());
-//            BeanContainer beanContainer = new BeanContainer(connection, siteRepository, pageRepository,
+        SitePage existSitePate = siteRepository.getSiteByUrl(site.getUrl());
+        site.setId(existSitePate.getId());
+        //ConcurrentHashMap<String, Page> resultForkJoinPageIndexer = new ConcurrentHashMap<>();
+        try {
+            log.info("Запущена переиндексация страницы:" + url.toString());
+            BeanContainer beanContainer = new BeanContainer(connection, siteRepository, pageRepository,
+                    lemmaService, pageIndexerService, indexingProcessing);
+            beanContainer.setUrl(url.toString());
+            beanContainer.setVisitedUrls(new ConcurrentLinkedQueue<>());
+            beanContainer.setSiteDomain(existSitePate);
+//            PageFinder pageFinder = new PageFinder(url.toString(), new ConcurrentLinkedQueue<>(), existSitePate,
+//                    connection, siteRepository, pageRepository,
 //                    lemmaService, pageIndexerService, indexingProcessing);
-//            beanContainer.setUrl(url.toString());
-//            beanContainer.setVisitedUrls(new ConcurrentLinkedQueue<>());
-//            beanContainer.setSiteDomain(existSitePate);
-////            PageFinder pageFinder = new PageFinder(url.toString(), new ConcurrentLinkedQueue<>(), existSitePate,
-////                    connection, siteRepository, pageRepository,
-////                    lemmaService, pageIndexerService, indexingProcessing);
-//            PageFinder pageFinder = new PageFinder(beanContainer);
-//            pageFinder.refreshPage();
-//        } catch (SecurityException ex) {
-//            SitePage sitePage = siteRepository.getSiteByUrl(site.getUrl());
-//            sitePage.setStatus(Status.FAILED);
-//            sitePage.setLastError(ex.getMessage());
-//            siteRepository.save(sitePage);
-//        }
-//
-//        log.info("Проиндексирован сайт: " + site.getName());
-//        SitePage sitePage = siteRepository.getSiteByUrl(site.getUrl());
-//        sitePage.setStatus(Status.INDEXED);
-//        siteRepository.save(sitePage);
+            PageFinder pageFinder = new PageFinder(beanContainer);
+            pageFinder.refreshPage();
+        } catch (SecurityException ex) {
+            SitePage sitePage = siteRepository.getSiteByUrl(site.getUrl());
+            sitePage.setStatus(Status.FAILED);
+            sitePage.setLastError(ex.getMessage());
+            siteRepository.save(sitePage);
+        }
+
+        log.info("Проиндексирован сайт: " + site.getName());
+        SitePage sitePage = siteRepository.getSiteByUrl(site.getUrl());
+        sitePage.setStatus(Status.INDEXED);
+        siteRepository.save(sitePage);
     }
 
 }
