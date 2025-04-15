@@ -130,22 +130,22 @@ public class PageFinder extends RecursiveAction{
 
                     //для многопоточки!
                     //task.compute();
-                    //task.fork();
 
+                    //task.fork();
                     tasks.add(task);
                     Thread.sleep(SLEEP_TIME);
                 }
             }
 
             invokeAll(tasks);
+
             //for (PageFinder task : tasks) {
 //                if (!beanContainer.getIndexingProcessing().get()) {
 //                    return;
 //                }
                 //beanContainer.getPool().invoke(task);
-                //task.join();
-            //}
-
+               //task.join();
+           // }
         }
         catch (Exception ex) {
             String error = ex.toString();
