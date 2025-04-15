@@ -87,7 +87,7 @@ public class PageFinder extends RecursiveAction{
         Connection connection = beanContainer.getConnection();
         PageRepository pageRepository = beanContainer.getPageRepository();
         PageIndexerService pageIndexerService = beanContainer.getPageIndexerService();
-        ForkJoinPool pool = beanContainer.getPool();
+        //ForkJoinPool pool = beanContainer.getPool();
 
         try {
             Document doc = Jsoup.connect(url)
@@ -113,7 +113,7 @@ public class PageFinder extends RecursiveAction{
 
             //инициализируем bean container
             BeanContainer newBeanContainer = new BeanContainer(
-                    pool, connection, siteRepository, pageRepository,
+                    connection, siteRepository, pageRepository,
                     beanContainer.getLemmaService(), pageIndexerService,
                     beanContainer.getIndexingProcessing()
             );
@@ -130,19 +130,21 @@ public class PageFinder extends RecursiveAction{
 
                     //для многопоточки!
                     //task.compute();
-                    task.fork();
+                    //task.fork();
+
                     tasks.add(task);
                     Thread.sleep(SLEEP_TIME);
                 }
             }
 
-            for (PageFinder task : tasks) {
+            invokeAll(tasks);
+            //for (PageFinder task : tasks) {
 //                if (!beanContainer.getIndexingProcessing().get()) {
 //                    return;
 //                }
-                beanContainer.getPool().invoke(task);
+                //beanContainer.getPool().invoke(task);
                 //task.join();
-            }
+            //}
 
         }
         catch (Exception ex) {

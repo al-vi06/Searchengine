@@ -125,7 +125,7 @@ public class StartIndexingService {
                 try {
                     log.info("Запущена индексация " + urlSite);
                     //инициализируем bean container
-                    BeanContainer beanContainer = new BeanContainer(pool, connection, siteRepository, pageRepository,
+                    BeanContainer beanContainer = new BeanContainer(connection, siteRepository, pageRepository,
                             lemmaService, pageIndexerService, indexingProcessing);
                     beanContainer.setUrl(urlSite);
                     beanContainer.setVisitedUrls(new ConcurrentLinkedQueue<>());
